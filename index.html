@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gym Rat</title>
+<meta name="description" content="Look back at your Gym Rat workouts, PRs, and progress.">
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #0b0b0c; --card: #161618; --card2: #1d1d20; --line: #2a2a2e;
+    --text: #f2f2f2; --muted: #9a9aa0; --green: #34c759; --orange: #ff9f0a; --red: #ff453a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; }
+  .brand svg { width: 30px; height: 30px; }
+  button, select { font: inherit; }
+  .link { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 6px 0; }
+  .link:hover { color: var(--text); }
+  h2 { font-size: 18px; margin: 32px 0 12px; }
+  .muted { color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .stat { background: var(--card); border-radius: 14px; padding: 14px 16px; }
+  .stat .v { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .k { color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { background: rgba(52,199,89,.16); color: var(--green); border-radius: 999px; padding: 3px 9px;
+          font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chip.warm { background: rgba(255,255,255,.08); color: var(--muted); }
+  .chip.drop { background: rgba(255,159,10,.16); color: var(--orange); }
+  .workout { border-top: 1px solid var(--line); padding: 14px 0; }
+  .workout:first-child { border-top: 0; padding-top: 0; }
+  .workout summary { cursor: pointer; list-style: none; }
+  .workout summary::-webkit-details-marker { display: none; }
+  .ex { margin-top: 10px; }
+  .ex .name { font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { text-align: left; padding: 9px 6px; border-top: 1px solid var(--line); font-size: 15px; }
+  th { color: var(--muted); font-weight: 600; border-top: 0; }
+  tr.you td { color: var(--green); font-weight: 700; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tab { background: var(--card2); color: var(--muted); border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .tab.on { background: var(--green); color: #000; font-weight: 700; }
+  select { background: var(--card2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; max-width: 100%; }
+  .chartwrap { position: relative; height: 280px; margin-top: 12px; }
+  .center { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; }
+  .apple { background: #fff; color: #000; border: 0; border-radius: 12px; padding: 14px 22px; font-weight: 700; font-size: 17px;
+           cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-width: 260px; justify-content: center; }
+  .apple svg { width: 18px; height: 18px; }
+  .err { color: var(--orange); max-width: 380px; }
+  .pr { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .pr > div:last-child { white-space: nowrap; text-align: right; }
+  .pr:first-child { border-top: 0; }
+  @media (max-width: 520px) { .stat .v { font-size: 22px; } td, th { padding: 8px 4px; font-size: 14px; } }
+</style>
+</head>
+<body>
+<main id="app"><div class="center"><p class="muted">Loading…</p></div></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+<script>
+// The Gym Rat website: sign in with the same Apple ID as the app, then look back at workouts,
+// PRs, progress, and the group's week. Read-only; nothing here changes what's logged.
+const FN = "https://yuxiocfpkkfrkuyowfvz.supabase.co/functions/v1/gym-rat";
+const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1eGlvY2Zwa2tmcmt1eW93ZnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMDIyMjksImV4cCI6MjEwNjc3ODIyOX0.5QWpS6X_J-31Ixnp4PsqjSdqQ1RbkpYSu1HASf3Rohw";
+const APPLE_CLIENT_ID = "com.bensealey.gymcoach.web";
+const app = document.getElementById("app");
+const store = {
+  get() { try { return localStorage.getItem("gymrat.session"); } catch { return null; } },
+  set(v) { try { v ? localStorage.setItem("gymrat.session", v) : localStorage.removeItem("gymrat.session"); } catch {} },
+};
+const LOGO = '<svg viewBox="0 0 24 24" fill="#34c759"><rect x="1" y="9" width="2.6" height="6" rx="1.3"/><rect x="4.4" y="6.5" width="3.4" height="11" rx="1.7"/><rect x="7.8" y="10.8" width="8.4" height="2.4"/><rect x="16.2" y="6.5" width="3.4" height="11" rx="1.7"/><rect x="20.4" y="9" width="2.6" height="6" rx="1.3"/></svg>';
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const num = (n) => Math.round(Number(n) || 0).toLocaleString("en-US");
+const lb = (w) => (Number(w) > 0 ? (Number.isInteger(Number(w)) ? String(Number(w)) : Number(w).toFixed(1)) : "BW");
+const day = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+async function call(body) {
+  const res = await fetch(FN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY, apikey: KEY },
+    body: JSON.stringify(body),
+  });
+  return res.json().catch(() => ({ error: "server" }));
+}
+
+function signInScreen(problem) {
+  app.innerHTML = `
+    <div class="center">
+      <div class="brand">${LOGO}<span>Gym Rat</span></div>
+      <p class="muted" style="max-width:380px">Your workouts, PRs, and progress. Sign in with the same Apple ID you use in the app.</p>
+      <button class="apple" id="signin">
+        <svg viewBox="0 0 17 20" fill="currentColor"><path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.8 1.2 1.8 2.6 3.1 2.5 1.3-.1 1.7-.8 3.3-.8 1.5 0 1.9.8 3.3.8 1.4 0 2.2-1.2 3-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4zM11.6 3c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>
+        Sign in with Apple</button>
+      ${problem ? `<p class="err">${esc(problem)}</p>` : ""}
+      <p class="muted" style="font-size:13px">Gym Rat is invite-only. Ask Ben for an invite.</p>
+    </div>`;
+  document.getElementById("signin").onclick = signIn;
+}
+
+async function signIn() {
+  try {
+    AppleID.auth.init({ clientId: APPLE_CLIENT_ID, scope: "", redirectURI: location.origin + location.pathname, usePopup: true });
+    const res = await AppleID.auth.signIn();
+    const token = res?.authorization?.id_token;
+    if (!token) return signInScreen("Sign-in didn't go through. Try again.");
+    const out = await call({ action: "web_login", id_token: token });
+    if (out.ok && out.session) { store.set(out.session); return load(); }
+    if (out.error === "not_a_member") return signInScreen("That Apple ID isn't a Gym Rat member yet. Sign in to the app first with your invite code, then come back.");
+    signInScreen("Sign-in didn't go through. Try again.");
+  } catch (e) {
+    if (e && e.error === "popup_closed_by_user") return signInScreen();
+    signInScreen("Sign-in didn't go through. Try again.");
+  }
+}
+
+async function load() {
+  const session = store.get();
+  if (!session) return signInScreen();
+  const out = await call({ action: "web_data", session });
+  if (out.error === "signed_out") { store.set(null); return signInScreen(); }
+  if (!out.ok) { app.innerHTML = `<div class="center"><p class="err">Couldn't load your stats. Refresh to try again.</p></div>`; return; }
+  render(out.data);
+}
+
+let chart;
+function render(d) {
+  const me = (d.board?.members || []).find((m) => m.is_you) || {};
+  const workouts = d.workouts || [];
+  const prs = d.prs || [];
+  const progress = d.progress || {};
+  const since30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const last30 = workouts.filter((w) => w.date >= since30);
+  // Exercises with the most sessions first in the chart picker.
+  const exercises = Object.keys(progress).sort((a, b) => progress[b].length - progress[a].length || a.localeCompare(b));
+
+  app.innerHTML = `
+    <header>
+      <div class="brand">${LOGO}<span>Gym Rat</span></div>
+      <div><span class="muted">${esc(d.name)}</span> · <button class="link" id="out">Sign out</button></div>
+    </header>
+
+    <div class="grid">
+      <div class="stat"><div class="v">${me.workouts_this_week ?? 0}${me.weekly_target ? " / " + me.weekly_target : ""}</div><div class="k">Workouts this week</div></div>
+      <div class="stat"><div class="v">${num(me.volume_this_week)}</div><div class="k">Pounds this week</div></div>
+      <div class="stat"><div class="v">${last30.length}</div><div class="k">Workouts, last 30 days</div></div>
+      <div class="stat"><div class="v">${prs.filter((p) => p.date >= since30).length}</div><div class="k">PRs, last 30 days</div></div>
+    </div>
+
+    <h2>Progress</h2>
+    <div class="card">
+      ${exercises.length ? `
+        <div class="row" style="flex-wrap:wrap">
+          <select id="ex">${exercises.map((e) => `<option>${esc(e)}</option>`).join("")}</select>
+          <div class="tabs">
+            <button class="tab on" data-m="top">Heaviest set</button>
+            <button class="tab" data-m="e1rm">Estimated max</button>
+            <button class="tab" data-m="pounds">Pounds moved</button>
+          </div>
+        </div>
+        <div class="chartwrap"><canvas id="chart"></canvas></div>
+        <p class="muted" style="font-size:13px;margin:8px 0 0">Estimated max is what you could lift once, worked out from your best set that day.</p>`
+      : `<p class="muted">Charts appear once an exercise has two workouts.</p>`}
+    </div>
+
+    <h2>PRs</h2>
+    <div class="card">${prs.length ? prs.slice(0, 25).map((p) => `
+      <div class="pr"><div><strong>${esc(p.exercise)}</strong> <span class="muted">· ${day(p.date)}</span></div>
+      <div>${lb(p.weight)} × ${p.reps} <span class="muted">(was ${lb(p.previous_best)})</span></div></div>`).join("")
+      : `<p class="muted">No PRs yet. They show up here the day you hit them.</p>`}</div>
+
+    <h2>Workouts</h2>
+    <div class="card">${workouts.length ? workouts.map((w) => `
+      <details class="workout">
+        <summary class="row">
+          <div><strong>${esc(w.focus || "Workout")}</strong><br><span class="muted">${day(w.date)}${w.place ? " · " + esc(w.place) : ""}</span></div>
+          <div class="muted" style="text-align:right">${num(w.pounds)} lb</div>
+        </summary>
+        ${(w.exercises || []).map((e) => `
+          <div class="ex"><div class="name">${esc(e.exercise)}</div>
+            <div class="chips">${(e.sets || []).map((s) => `<span class="chip ${s.warmup ? "warm" : s.drop ? "drop" : ""}">${s.warmup ? "W " : s.drop ? "D " : ""}${lb(s.w)}×${s.r}</span>`).join("")}</div>
+          </div>`).join("")}
+      </details>`).join("") : `<p class="muted">No workouts yet.</p>`}</div>
+
+    <h2>The group this week</h2>
+    <div class="card">
+      <table><thead><tr><th>Name</th><th>Workouts</th><th>Pounds</th><th>PRs</th></tr></thead><tbody>
+        ${(d.board?.members || []).map((m) => `
+          <tr class="${m.is_you ? "you" : ""}"><td>${esc(m.name)}</td>
+          <td>${m.workouts_this_week ?? 0}${m.weekly_target ? " / " + m.weekly_target : ""}</td>
+          <td>${num(m.volume_this_week)}</td><td>${(m.prs_this_week || []).length}</td></tr>`).join("")}
+      </tbody></table>
+    </div>`;
+
+  document.getElementById("out").onclick = () => { store.set(null); signInScreen(); };
+  if (!exercises.length) return;
+  let metric = "top";
+  const draw = () => {
+    const name = document.getElementById("ex").value;
+    const pts = progress[name] || [];
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById("chart"), {
+      type: "line",
+      data: {
+        labels: pts.map((p) => day(p.date)),
+        datasets: [{ data: pts.map((p) => Number(p[metric])), borderColor: "#34c759", backgroundColor: "rgba(52,199,89,.15)",
+                     fill: true, tension: 0.25, pointRadius: 3 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: "#9a9aa0", maxRotation: 0, autoSkip: true }, grid: { color: "#222" } },
+                  y: { ticks: { color: "#9a9aa0" }, grid: { color: "#222" } } },
+      },
+    });
+  };
+  document.getElementById("ex").onchange = draw;
+  document.querySelectorAll(".tab").forEach((b) => (b.onclick = () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+    metric = b.dataset.m;
+    draw();
+  }));
+  draw();
+}
+
+// Local preview only: ?demo loads sample.json next to this page.
+if (new URLSearchParams(location.search).has("demo")) {
+  fetch("sample.json").then((r) => r.json()).then(render);
+} else {
+  load();
+}
+</script>
+</body>
+</html>
