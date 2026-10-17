@@ -229,8 +229,37 @@ function render(d) {
   draw();
 }
 
-// Local preview only: ?demo loads sample.json next to this page.
-if (new URLSearchParams(location.search).has("demo")) {
+// A shared workout (?w=...): one workout anyone with the link can see, no sign-in.
+const prLine = (p) => p.kind === "weight" ? `${esc(p.exercise)}: ${lb(p.weight)} lb, heaviest ever (was ${lb(p.previous_best)})`
+  : p.kind === "reps" ? `${esc(p.exercise)}: ${p.reps} reps at ${lb(p.weight)}, most ever at that weight (was ${p.previous_best_reps})`
+  : `${esc(p.exercise)}: ${num(p.total)} lb moved, most in one workout (was ${num(p.previous_best_total)})`;
+async function loadShared(key) {
+  const out = await call({ action: "web_workout", key });
+  if (!out.ok) { app.innerHTML = `<div class="center"><div class="brand">${LOGO}<span>Gym Rat</span></div><p class="muted">This workout link isn't valid anymore.</p></div>`; return; }
+  const w = out.workout;
+  app.innerHTML = `
+    <header><div class="brand">${LOGO}<span>Gym Rat</span></div></header>
+    <h1 style="font-size:28px;margin:0 0 4px">${esc(w.name)}'s workout</h1>
+    <p class="muted" style="margin:0 0 18px">${esc(w.focus || "Workout")} · ${day(w.date)}${w.place ? " · " + esc(w.place) : ""}</p>
+    <div class="grid">
+      <div class="stat"><div class="v">${num(w.pounds)}</div><div class="k">Pounds moved</div></div>
+      <div class="stat"><div class="v">${(w.exercises || []).length}</div><div class="k">Exercises</div></div>
+      <div class="stat"><div class="v">${(w.prs || []).length}</div><div class="k">PRs</div></div>
+    </div>
+    ${(w.prs || []).length ? `<h2>PRs</h2><div class="card">${w.prs.map((p) => `<div class="pr"><div>${prLine(p)}</div></div>`).join("")}</div>` : ""}
+    <h2>Every set</h2>
+    <div class="card">${(w.exercises || []).map((e) => `
+      <div class="ex" style="margin:0 0 14px"><div class="name">${esc(e.exercise)}</div>
+        <div class="chips">${(e.sets || []).map((x) => `<span class="chip ${x.warmup ? "warm" : x.drop ? "drop" : ""}">${x.warmup ? "W " : x.drop ? "D " : ""}${lb(x.w)}×${x.r}</span>`).join("")}</div>
+      </div>`).join("")}</div>
+    <p class="muted" style="font-size:13px;margin-top:24px">Logged by voice with Gym Rat, a coach in your ear.</p>`;
+}
+
+const params = new URLSearchParams(location.search);
+if (params.has("w")) {
+  loadShared(params.get("w"));
+} else if (params.has("demo")) {
+  // Local preview only: ?demo loads sample.json next to this page.
   fetch("sample.json").then((r) => r.json()).then(render);
 } else {
   load();
