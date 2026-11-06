@@ -232,6 +232,7 @@ function render(d) {
 // A shared workout (?w=...): one workout anyone with the link can see, no sign-in.
 const prLine = (p) => p.kind === "weight" ? `${esc(p.exercise)}: ${lb(p.weight)} lb, heaviest ever (was ${lb(p.previous_best)})`
   : p.kind === "reps" ? `${esc(p.exercise)}: ${p.reps} reps at ${lb(p.weight)}, most ever at that weight (was ${p.previous_best_reps})`
+  : p.kind === "hold" ? `${esc(p.exercise)}: ${p.seconds} seconds, longest hold (was ${p.previous_best_seconds})`
   : `${esc(p.exercise)}: ${num(p.total)} lb moved, most in one workout (was ${num(p.previous_best_total)})`;
 async function loadShared(key) {
   const out = await call({ action: "web_workout", key });
