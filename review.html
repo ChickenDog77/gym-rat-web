@@ -1,0 +1,1514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gym Rat Review</title>
+<meta name="description" content="Replay a workout with the coach, line by line, and note what it should have said.">
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #0b0b0c; --card: #161618; --card2: #1d1d20; --line: #2a2a2e;
+    --text: #f2f2f2; --muted: #9a9aa0; --green: #34c759; --orange: #ff9f0a; --red: #ff453a;
+    --you: #9ecbff; --silent: #64d2ff; --long: #ffd60a; --wrong: #ff6961; --say: #34c759;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 96px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; }
+  .brand svg { width: 30px; height: 30px; }
+  .brand .sub { color: var(--muted); font-weight: 600; font-size: 18px; }
+  button, select, textarea, input { font: inherit; }
+  a { color: var(--muted); }
+  a:hover { color: var(--text); }
+  .link { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 6px 0; text-decoration: none; }
+  .link:hover { color: var(--text); }
+  :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  h1 { font-size: 26px; margin: 0 0 2px; }
+  h2 { font-size: 18px; margin: 28px 0 10px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat { background: var(--card); border-radius: 14px; padding: 14px 16px; }
+  .stat .v { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat .k { color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .center { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; }
+  .apple { background: #fff; color: #000; border: 0; border-radius: 12px; padding: 14px 22px; font-weight: 700; font-size: 17px;
+           cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-width: 260px; justify-content: center; }
+  .apple:disabled { opacity: .6; cursor: default; }
+  .apple svg { width: 18px; height: 18px; }
+  .err { color: var(--orange); }
+  .ok { color: var(--green); }
+  .btn { background: var(--green); color: #000; font-weight: 700; border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; }
+  .btn.ghost { background: var(--card2); color: var(--text); font-weight: 600; }
+  .btn.danger { background: rgba(255,69,58,.16); color: var(--red); font-weight: 600; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .demo { background: rgba(255,214,10,.10); color: var(--long); border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 16px; }
+  .demo a { color: var(--long); margin-right: 10px; }
+  .demo a[aria-current] { font-weight: 800; text-decoration: none; }
+
+  /* The workouts down the left, the workout on the right. */
+  .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; background: var(--card); border-radius: 16px; padding: 8px; }
+  .side h2 { margin: 6px 10px 8px; font-size: 15px; color: var(--muted); }
+  .wk { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--text); padding: 9px 10px; border-radius: 10px; cursor: pointer; }
+  .wk:hover { background: var(--card2); }
+  .wk[aria-current="true"] { background: rgba(52,199,89,.14); }
+  .wk .d { font-weight: 700; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .wk .f { font-size: 14px; color: #d7d7dc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wk .m { color: var(--muted); font-size: 12.5px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .wk .m svg { width: 13px; height: 13px; vertical-align: -2px; }
+  .badge { background: rgba(52,199,89,.18); color: var(--green); border-radius: 999px; padding: 1px 7px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .more { width: 100%; margin-top: 6px; }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    .side { position: static; max-height: 280px; }
+  }
+
+  /* The numbers and the trend. */
+  .trend { margin-top: 12px; }
+  .chart { position: relative; height: 150px; margin-top: 8px; }
+  .chart svg { display: block; width: 100%; height: 150px; overflow: visible; }
+  .chart .mark { fill: #3a3a40; }
+  .chart .cur .mark { fill: var(--green); }
+  .chart .go { cursor: pointer; }
+  .chart .bar:hover .mark { fill: #55555c; }
+  .chart .cur:hover .mark { fill: #5cd67a; }
+  .chart .val { fill: var(--text); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .chart .lbl { fill: var(--muted); font-size: 11px; }
+  .chart .base { stroke: var(--line); stroke-width: 1; }
+  .tip { position: absolute; pointer-events: none; background: #2c2c30; color: var(--text); font-size: 12.5px; padding: 6px 9px; border-radius: 8px;
+         white-space: nowrap; transform: translate(-50%, calc(-100% - 8px)); box-shadow: 0 4px 12px rgba(0,0,0,.4); display: none; z-index: 2; }
+
+  /* Teach the coach. */
+  .teach { margin-top: 12px; display: grid; gap: 10px; }
+  .teach ul { margin: 4px 0 0; padding-left: 20px; }
+  .teach li { margin: 3px 0; }
+  .status { font-size: 14px; }
+  .undone { color: var(--muted); text-decoration: line-through; }
+
+  /* The player sticks to the top while the lines scroll under it. */
+  .player { position: sticky; top: 8px; z-index: 5; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px;
+            box-shadow: 0 -9px 0 var(--bg), 0 10px 24px rgba(0,0,0,.5); margin: 20px 0 8px; }
+  .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pbtn { background: var(--card2); color: var(--text); border: 0; border-radius: 999px; height: 40px; min-width: 40px; padding: 0 10px;
+          display: inline-flex; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font-size: 12px; font-weight: 700; }
+  .pbtn svg { width: 20px; height: 20px; }
+  .pbtn.play { background: var(--green); color: #000; width: 48px; height: 48px; }
+  .pbtn.play svg { width: 24px; height: 24px; }
+  .pbtn:disabled { opacity: .45; cursor: default; }
+  .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 110px; }
+  .time b { color: var(--text); font-weight: 600; }
+  .speeds { display: flex; gap: 4px; margin-left: auto; }
+  .tab { background: var(--card2); color: var(--muted); border: 0; border-radius: 999px; padding: 6px 11px; cursor: pointer; font-size: 13px; }
+  .tab[aria-pressed="true"] { background: var(--green); color: #000; font-weight: 700; }
+  .scrub { position: relative; margin-top: 10px; }
+  .scrub input { width: 100%; margin: 0; accent-color: var(--green); cursor: pointer; }
+  .marks { position: relative; height: 6px; margin: 0 8px 2px; }
+  .marks i { position: absolute; top: 0; width: 3px; height: 6px; border-radius: 2px; background: #cfcfd4; transform: translateX(-1px); }
+  .marks i.t-silent { background: var(--silent); } .marks i.t-too_long { background: var(--long); }
+  .marks i.t-wrong { background: var(--wrong); } .marks i.t-say_this { background: var(--say); }
+  .pmsg { font-size: 13px; margin: 8px 0 0; min-height: 0; }
+  .pmsg:empty { display: none; }
+  .keys { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+  @media (max-width: 600px) { .speeds { margin-left: 0; width: 100%; } .keys { display: none; } }
+
+  /* The lines, with his notes beside each one. */
+  .lines { background: var(--card); border-radius: 16px; overflow: hidden; }
+  .lhead { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 16px; padding: 10px 14px; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .line { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 16px; padding: 12px 14px; border-top: 1px solid var(--line); scroll-margin-top: 160px; }
+  .line.now { background: rgba(52,199,89,.09); box-shadow: inset 3px 0 0 var(--green); }
+  .say { border-radius: 8px; }
+  .say.seekable { cursor: pointer; }
+  .say.seekable:hover .text { color: #fff; }
+  .meta { display: flex; gap: 8px; font-size: 12px; color: var(--muted); align-items: baseline; flex-wrap: wrap; }
+  .who { font-weight: 800; text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+  .who.coach { color: var(--green); }
+  .who.you { color: var(--you); }
+  .pos { font-variant-numeric: tabular-nums; }
+  .text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+  .line.you .text { color: #d7d7dc; }
+  .unclear { color: var(--muted); font-style: italic; }
+  .tagrow { display: flex; flex-wrap: wrap; gap: 6px; transition: opacity .15s; }
+  .tagbtn { background: var(--card2); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
+  .tagbtn:hover { color: var(--text); border-color: #3e3e44; }
+  .tagbtn:disabled { opacity: .5; cursor: default; }
+  .tagbtn.on { border-color: transparent; font-weight: 700; }
+  .t-silent.on, .pill.t-silent { background: rgba(100,210,255,.16); color: var(--silent); }
+  .t-too_long.on, .pill.t-too_long { background: rgba(255,214,10,.14); color: var(--long); }
+  .t-wrong.on, .pill.t-wrong { background: rgba(255,105,97,.16); color: var(--wrong); }
+  .t-say_this.on, .pill.t-say_this { background: rgba(52,199,89,.16); color: var(--say); }
+  @media (hover: hover) {
+    .line .tagrow { opacity: .4; }
+    .line:hover .tagrow, .line:focus-within .tagrow, .line.now .tagrow { opacity: 1; }
+  }
+  .note { background: var(--card2); border-radius: 10px; padding: 8px 10px; margin-top: 8px; font-size: 14px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; }
+  .better { margin-top: 4px; color: var(--text); }
+  .ntext { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; color: #d7d7dc; }
+  .nact { display: flex; gap: 12px; align-items: baseline; margin-top: 4px; font-size: 12.5px; }
+  .nact .link { padding: 0; font-size: 12.5px; }
+  .nact .link.sure { color: var(--red); font-weight: 700; }
+  .form { background: var(--card2); border-radius: 10px; padding: 10px; margin-top: 8px; display: grid; gap: 8px; }
+  .form label { font-size: 12.5px; color: var(--muted); }
+  .form .tagrow { opacity: 1 !important; }
+  .form .btn.ghost { background: #2e2e33; }
+  .form .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .form .count { justify-self: end; margin-top: -4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  textarea { width: 100%; background: #0f0f11; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+             font-size: 14px; line-height: 1.4; resize: vertical; min-height: 58px; }
+  textarea:focus { border-color: #4a4a52; outline: none; }
+  .lerr { font-size: 13px; margin: 6px 0 0; }
+  @media (max-width: 720px) {
+    .line, .lhead { grid-template-columns: 1fr; gap: 8px; }
+    .lhead span:last-child { display: none; }
+  }
+  @media (max-width: 520px) { .stat .v { font-size: 22px; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<main id="app"><div class="center"><p class="muted">Loading…</p></div></main>
+
+<script>
+"use strict";
+// Gym Rat's review page, for the app's owner only: replay a past workout with the coach, its audio and its lines
+// together, and leave notes on the lines (one-tap tags, "Say it like this…" with the better line, free notes) that teach
+// the coach. Every call goes to the gym-rat function's web_review action, which checks the website session and that the
+// member is an admin on every call; anyone else gets nothing. Everything said in a workout and every note is shown as
+// text, never as HTML. review.html?demo=1 runs on made-up data in review-demo.json with no sign-in and no server.
+const FN = "https://yuxiocfpkkfrkuyowfvz.supabase.co/functions/v1/gym-rat";
+const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1eGlvY2Zwa2tmcmt1eW93ZnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMDIyMjksImV4cCI6MjEwNjc3ODIyOX0.5QWpS6X_J-31Ixnp4PsqjSdqQ1RbkpYSu1HASf3Rohw";
+const APPLE_CLIENT_ID = "com.bensealey.gymcoach.web";
+const APPLE_JS = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
+const params = new URLSearchParams(location.search);
+const DEMO = params.has("demo");
+const app = document.getElementById("app");
+// The same session as the stats page (index.html), so signing in on either works for both.
+const store = {
+  get() { try { return localStorage.getItem("gymrat.session"); } catch { return null; } },
+  set(v) { try { v ? localStorage.setItem("gymrat.session", v) : localStorage.removeItem("gymrat.session"); } catch {} },
+};
+const prefs = {
+  get(k, d) { try { return localStorage.getItem("gymrat.review." + k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("gymrat.review." + k, String(v)); } catch {} },
+};
+const PAGE = DEMO ? 3 : 40;                 // workouts per page of the list
+let LINK_LIFE_MS = 3600 * 1000;             // signed audio links last an hour (the demo's are shorter)
+const SPEEDS = [1, 1.25, 1.5, 2];
+const TAG_WORDS = { silent: "Should've been silent", too_long: "Too long", wrong: "Wrong", say_this: "Say it like this" };
+const TAG_BUTTON = { silent: "Should've been silent", too_long: "Too long", wrong: "Wrong", say_this: "Say it like this…" };
+// His lines can be wrong or need a better answer; only the coach's can be silent or too long.
+const TAGS_FOR = { coach: ["silent", "too_long", "wrong", "say_this"], you: ["wrong", "say_this"] };
+const TOOL_WORDS = {
+  log_set: "saved a set", edit_set: "changed a set", start_workout: "started the workout", end_workout: "closed the workout",
+  reopen_workout: "reopened the workout", save_note: "saved a note", set_exercise_note: "saved a setup note",
+  superset_exercises: "made a superset", start_rest_timer: "rest timer", cancel_rest_timer: "stopped the rest timer",
+  set_rest_timer: "rest timer setting", start_timed_hold: "hold timer", start_tabata: "Tabata timer", stop_timer: "stopped the timer",
+  todays_plan: "looked at the plan", exercise_history: "looked up history", edit_plan: "changed the plan", edit_program: "changed the program",
+  set_chatty: "talk level", set_per_side: "per side", web_search: "looked it up", web_lookup: "looked it up", use_regular: "regular coach",
+};
+
+// ---------------------------------------------------------------- small helpers
+
+// Builds an element. Strings among the children become text nodes, so nothing passed here is ever read as HTML.
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "value") el.value = v;
+    else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : String(v));
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false || kid === "") continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+// Replaces an element's children, leaving out the empty ones (the DOM would write "null").
+function fill(el, ...kids) {
+  el.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false && k !== ""));
+  return el;
+}
+function svgEl(tag, attrs, ...kids) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, String(v));
+  for (const kid of kids) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+// Fixed icons, written here; never anything from the server.
+const ICONS = {
+  logo: '<svg viewBox="0 0 24 24" fill="#34c759" aria-hidden="true"><rect x="1" y="9" width="2.6" height="6" rx="1.3"/><rect x="4.4" y="6.5" width="3.4" height="11" rx="1.7"/><rect x="7.8" y="10.8" width="8.4" height="2.4"/><rect x="16.2" y="6.5" width="3.4" height="11" rx="1.7"/><rect x="20.4" y="9" width="2.6" height="6" rx="1.3"/></svg>',
+  apple: '<svg viewBox="0 0 17 20" fill="currentColor" aria-hidden="true"><path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.8 1.2 1.8 2.6 3.1 2.5 1.3-.1 1.7-.8 3.3-.8 1.5 0 1.9.8 3.3.8 1.4 0 2.2-1.2 3-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.7-4zM11.6 3c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.3-.6 3.1-1.5z"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.6v12.8a1 1 0 0 0 1.52.85l10.3-6.4a1 1 0 0 0 0-1.7L9.52 4.75A1 1 0 0 0 8 5.6z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v3.9h3.9"/></svg>',
+  ahead: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v3.9h-3.9"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+};
+function icon(name) {
+  const t = document.createElement("template");
+  t.innerHTML = ICONS[name];
+  return t.content.firstChild;
+}
+const brand = () => h("div", { class: "brand" }, icon("logo"), h("span", {}, "Gym Rat"), h("span", { class: "sub" }, "Review"));
+const pad = (n) => String(n).padStart(2, "0");
+function clockOf(ms) {
+  const s = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  const hr = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return hr ? `${hr}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
+}
+const num1 = (v) => { const n = Number(v) || 0; return Number.isInteger(n) ? String(n) : n.toFixed(1); };
+const day = (d) => new Date(String(d) + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const shortDay = (d) => new Date(String(d) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const timeOf = (iso) => { const t = new Date(iso); return isNaN(t) ? "" : t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
+const whenOf = (iso) => { const t = new Date(iso); return isNaN(t) ? "" : t.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const addDay = (d) => { const t = new Date(String(d) + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); };
+const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+const typing = (el) => !!(el && el.closest && el.closest("textarea, input:not([type=range]), select, [contenteditable]"));
+
+// ---------------------------------------------------------------- the server
+
+async function call(body) {
+  try {
+    const res = await fetch(FN, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY, apikey: KEY },
+      body: JSON.stringify(body),
+    });
+    return await res.json().catch(() => ({ error: "server" }));
+  } catch {
+    return { error: "network" };
+  }
+}
+
+// One review call. Signed out or not the owner: that screen replaces the page and the answer says { gone: true }.
+async function api(op, extra = {}) {
+  const out = DEMO ? await demo.handle(op, extra) : await call({ action: "web_review", session: store.get(), op, ...extra });
+  if (out?.error === "signed_out") { store.set(null); signInScreen(); return { gone: true }; }
+  if (out?.error === "not_allowed") { notOwnerScreen(); return { gone: true }; }
+  return out || { error: "server" };
+}
+
+// ---------------------------------------------------------------- state
+
+const S = {
+  workouts: [], more: false, current: null, data: null, lines: [], lineEls: [], noteBoxes: [], cues: [], hl: -1,
+  player: null, pollTimer: 0, openToken: 0, followPausedUntil: 0, ui: {}, teachMsg: null, teaching: false, resize: null,
+};
+let demo = null;
+
+function show(...nodes) {
+  app.replaceChildren(...(DEMO ? [demoBanner()] : []), ...nodes);
+}
+function stopWorkout() {
+  S.player?.destroy();
+  S.player = null;
+  clearTimeout(S.pollTimer);
+  S.resize?.disconnect();
+  S.resize = null;
+  S.hl = -1; S.lineEls = []; S.noteBoxes = []; S.cues = []; S.lines = []; S.teachMsg = null; S.teaching = false;
+}
+function stopAll() {
+  stopWorkout();
+  S.openToken++;
+}
+const dirty = () => S.lines.some((l) => l._form && (String(l._form.text || "").trim() || String(l._form.better || "").trim()));
+addEventListener("beforeunload", (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+// ---------------------------------------------------------------- signing in, and who may see this
+
+let appleLoad = null;
+function loadApple() {
+  appleLoad ??= new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = APPLE_JS;
+    s.onload = ok;
+    s.onerror = () => { appleLoad = null; no(new Error("apple")); };
+    document.head.append(s);
+  });
+  return appleLoad;
+}
+
+function signInScreen(problem) {
+  stopAll();
+  const btn = h("button", { class: "apple", disabled: !DEMO }, icon("apple"), "Sign in with Apple");
+  btn.addEventListener("click", signIn);
+  const msg = h("p", { class: "err", style: "max-width:380px" }, problem || "");
+  show(h("div", { class: "center" },
+    brand(),
+    h("p", { class: "muted", style: "max-width:380px" }, "Replay your workouts with the coach and teach it from your notes. Sign in with the same Apple ID you use in the app."),
+    btn, msg));
+  // Loaded only when it's needed, so the button opens Apple's window straight from the click.
+  if (!DEMO) loadApple().then(() => { btn.disabled = false; }, () => { msg.textContent = "Couldn't load Sign in with Apple. Refresh to try again."; });
+}
+
+async function signIn() {
+  if (DEMO) { location.search = "?demo=1"; return; }
+  try {
+    // The site's own address, the one Apple knows (the stats page signs in from it too).
+    AppleID.auth.init({ clientId: APPLE_CLIENT_ID, scope: "", redirectURI: location.origin + "/", usePopup: true });
+    const res = await AppleID.auth.signIn();
+    const token = res?.authorization?.id_token;
+    if (!token) return signInScreen("Sign-in didn't go through. Try again.");
+    const out = await call({ action: "web_login", id_token: token });
+    if (out.ok && out.session) { store.set(out.session); return start(); }
+    if (out.error === "not_a_member") return signInScreen("That Apple ID isn't a Gym Rat member yet.");
+    signInScreen("Sign-in didn't go through. Try again.");
+  } catch (e) {
+    if (e && e.error === "popup_closed_by_user") return signInScreen();
+    signInScreen("Sign-in didn't go through. Try again.");
+  }
+}
+
+function signOut() {
+  if (dirty() && !confirm("You have a note that isn't saved. Sign out anyway?")) return;
+  store.set(null);
+  if (DEMO) { location.search = "?demo=1&as=signedout"; return; }
+  signInScreen();
+}
+
+function notOwnerScreen() {
+  stopAll();
+  show(h("div", { class: "center" },
+    brand(),
+    h("p", {}, "This page is only for the app's owner."),
+    h("p", { class: "muted" }, h("a", { href: "./" }, "Your workouts and PRs"), " · ",
+      h("button", { class: "link", onclick: signOut }, "Sign out"))));
+}
+
+function demoBanner() {
+  const as = params.get("as") || "";
+  const view = (label, q, on) => h("a", { href: "?" + q, "aria-current": on ? "page" : null }, label);
+  return h("div", { class: "demo" },
+    h("strong", {}, "Demo"), " with made-up workouts. Nothing is sent anywhere. ",
+    view("Owner", "demo=1", as === ""), view("Not the owner", "demo=1&as=guest", as === "guest"),
+    view("Signed out", "demo=1&as=signedout", as === "signedout"), view("No workouts", "demo=1&as=empty", as === "empty"),
+    h("span", { class: "muted" }, "Put #fail in a note to see a save that fails."));
+}
+
+// ---------------------------------------------------------------- the page
+
+async function start() {
+  stopAll();
+  S.ui.list = h("nav", { class: "side", "aria-label": "Workouts" }, h("h2", {}, "Workouts"), h("p", { class: "muted small", style: "margin:0 10px" }, "Loading…"));
+  S.ui.pane = h("section", { "aria-live": "polite" });
+  show(
+    h("header", {}, brand(),
+      h("div", {}, h("a", { class: "link", href: "./" }, "Your stats"), h("span", { class: "muted" }, " · "),
+        h("button", { class: "link", onclick: signOut }, "Sign out"))),
+    h("div", { class: "layout" }, S.ui.list, S.ui.pane));
+  const out = await api("list", { limit: PAGE });
+  if (out.gone) return;
+  if (!out.ok) {
+    S.ui.list.replaceChildren(h("p", { class: "err small", style: "margin:10px" }, out.error === "network" ? "Couldn't reach Gym Rat. Check your connection and refresh." : "Couldn't load your workouts. Refresh to try again."));
+    return;
+  }
+  S.workouts = Array.isArray(out.workouts) ? out.workouts : [];
+  S.more = S.workouts.length >= PAGE;
+  renderList();
+  if (!S.workouts.length) {
+    S.ui.pane.replaceChildren(h("div", { class: "card" }, h("strong", {}, "No workouts to review yet."),
+      h("p", { class: "muted", style: "margin:6px 0 0" }, "A workout shows up here once you've talked with the coach in it.")));
+    return;
+  }
+  const want = Number(new URLSearchParams(location.hash.slice(1)).get("w"));
+  open(Number.isInteger(want) && want > 0 ? want : S.workouts[0].workout_id);
+}
+
+function renderList() {
+  const box = S.ui.list;
+  if (!box) return;
+  box.replaceChildren(h("h2", {}, "Workouts"));
+  if (!S.workouts.length) box.append(h("p", { class: "muted small", style: "margin:0 10px 8px" }, "None yet."));
+  for (const w of S.workouts) {
+    const m = w.metrics || {};
+    const waiting = Number(w.notes_pass?.waiting) || 0;
+    const notes = Number(m.notes) || 0;
+    box.append(h("button", { class: "wk", "aria-current": w.workout_id === S.current ? "true" : "false", onclick: () => openGuarded(w.workout_id) },
+      h("div", { class: "d" }, h("span", {}, day(w.date)), waiting ? h("span", { class: "badge", title: "Notes the coach hasn't learned from yet" }, waiting + " to teach") : null),
+      h("div", { class: "f" }, w.focus || "Workout"),
+      h("div", { class: "m" },
+        h("span", {}, Number(m.sets) > 0 ? num1(m.words_per_set) + " words/set" : "no sets"),
+        notes ? h("span", {}, "· " + plural(notes, "note", "notes")) : null,
+        w.has_audio ? h("span", { title: "Has audio" }, "· ", icon("audio")) : w.audio_deleted ? h("span", {}, "· audio deleted") : null)));
+  }
+  if (S.more) {
+    const btn = h("button", { class: "btn ghost more" }, "Show older");
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "Loading…";
+      // A day past the oldest one shown, so a day that was split between pages comes back whole (repeats dropped).
+      const oldest = S.workouts[S.workouts.length - 1].date;
+      const out = await api("list", { limit: PAGE, before: addDay(oldest) });
+      if (out.gone) return;
+      if (!out.ok) { btn.disabled = false; btn.textContent = "Couldn't load. Try again"; return; }
+      const have = new Set(S.workouts.map((w) => w.workout_id));
+      const fresh = (out.workouts || []).filter((w) => !have.has(w.workout_id));
+      S.workouts.push(...fresh);
+      S.more = fresh.length > 0 && (out.workouts || []).length >= PAGE;
+      renderList();
+    });
+    box.append(btn);
+  }
+}
+
+function openGuarded(id) {
+  if (id === S.current) return;
+  if (dirty() && !confirm("You have a note that isn't saved. Leave it?")) return;
+  open(id);
+}
+
+async function open(id) {
+  stopWorkout();
+  const token = ++S.openToken;
+  S.current = id;
+  history.replaceState(null, "", location.pathname + location.search + "#w=" + id);
+  renderList();
+  S.ui.pane.replaceChildren(h("div", { class: "card muted" }, "Loading…"));
+  const out = await api("workout", { workout_id: id });
+  if (token !== S.openToken || out.gone) return;
+  if (!out.ok || !out.review) {
+    S.ui.pane.replaceChildren(h("div", { class: "card" },
+      h("p", { class: "err", style: "margin:0 0 10px" }, out.error === "network" ? "Couldn't reach Gym Rat. Check your connection." : "Couldn't load this workout."),
+      h("button", { class: "btn ghost", onclick: () => open(id) }, "Try again")));
+    return;
+  }
+  S.data = out;
+  renderPane();
+}
+
+function renderPane() {
+  const d = S.data;
+  const w = d.review.workout || {};
+  S.lines = Array.isArray(d.review.lines) ? d.review.lines : [];
+  S.lines.forEach((l, i) => { l._i = i; if (!Array.isArray(l.notes)) l.notes = []; });
+  const segs = buildTimeline(d.review.audio?.segments);
+  S.player = segs.length ? new Player(segs, w.workout_id) : null;
+  const span = w.started_at ? `${timeOf(w.started_at)}${w.ended_at ? " to " + timeOf(w.ended_at) : ", still open"}` : "";
+  S.ui.metrics = h("div", {});
+  S.ui.trend = h("div", { class: "card trend" });
+  S.ui.teach = h("div", { class: "card teach" });
+  S.ui.pane.replaceChildren(
+    h("h1", {}, w.focus || "Workout"),
+    h("p", { class: "muted", style: "margin:0 0 16px" }, day(w.date), span ? " · " + span : ""),
+    S.ui.metrics, S.ui.trend, S.ui.teach,
+    S.player ? S.player.view() : noAudioView(d.review.audio),
+    linesView());
+  renderMetrics();
+  renderTrend();
+  renderTeach();
+  if (S.player) { S.player.prepare(); S.player.marks(); }
+  // A trend drawn at the width it really has.
+  S.resize = new ResizeObserver(() => { cancelAnimationFrame(S.resizeFrame); S.resizeFrame = requestAnimationFrame(drawTrend); });
+  S.resize.observe(S.ui.trend);
+  if (d.notes_pass?.last?.status === "running") poll();
+}
+
+function noAudioView(audio) {
+  return h("div", { class: "player", style: "position:static" },
+    h("p", { class: "muted", style: "margin:0" }, audio?.deleted ? "This workout's audio was deleted. All its lines are below." : "No audio for this workout. All its lines are below."));
+}
+
+// ---------------------------------------------------------------- the numbers at the top
+
+const allNotes = () => S.lines.flatMap((l) => l.notes || []);
+const tagCount = (t) => allNotes().filter((n) => n.tag === t).length;
+
+function renderMetrics() {
+  const m = S.data.metrics || {};
+  const tile = (v, k, title) => h("div", { class: "stat", title }, h("div", { class: "v" }, v), h("div", { class: "k" }, k));
+  const cut = m.cut_off == null ? "–" : num1(m.cut_off);
+  const from = m.counted_by === "review" ? "Counted by the coach's self-review." : "Counted from the lines; this one has no self-review numbers.";
+  const cutFrom = m.cut_off_from === "phone" ? " Cut-offs counted by the phone." : m.cut_off_from === "review" ? " Cut-offs from the self-review." : " Cut-offs weren't counted for this one.";
+  S.ui.metrics.replaceChildren(
+    h("div", { class: "grid" },
+      tile(num1(m.sets), "Sets"),
+      tile(num1(m.replies), "Coach replies"),
+      tile(num1(m.words_per_set), "Words per set", "Words the coach said, divided by sets"),
+      tile(num1(m.got_it), "“Got it”", "Coach lines with “got it” in them"),
+      tile(String(tagCount("silent")), "Should've been silent", "Lines you tagged"),
+      tile(cut, "Times you cut it off")),
+    h("p", { class: "muted small", style: "margin:8px 2px 0" }, from + cutFrom));
+}
+
+function renderTrend() {
+  const pts = (S.data.trend || []).filter((p) => p && p.words_per_set != null);
+  S.ui.trend.replaceChildren(
+    h("div", { class: "row" }, h("strong", {}, "Words per set"),
+      h("span", { class: "muted small" }, pts.length ? `Your last ${plural(pts.length, "workout", "workouts")} with the coach talking. Lower is quieter.` : "")));
+  if (!pts.length) { S.ui.trend.append(h("p", { class: "muted small", style: "margin:6px 0 0" }, "Shows once a finished workout has the coach talking.")); return; }
+  S.ui.chart = h("div", { class: "chart" });
+  S.ui.trend.append(S.ui.chart);
+  drawTrend();
+}
+
+// One bar per workout, this one in green, the latest and this one labeled; hover for the numbers, click to open one.
+function drawTrend() {
+  const box = S.ui.chart;
+  if (!box || !box.isConnected || !S.data) return;
+  const pts = (S.data.trend || []).filter((p) => p && p.words_per_set != null);
+  const W = Math.max(240, box.clientWidth || 600), H = 150, top = 20, bottom = 24;
+  const band = W / pts.length, bw = Math.max(8, Math.min(44, band * 0.6));
+  const max = Math.max(1, ...pts.map((p) => Number(p.words_per_set) || 0));
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": "Words per set: " + pts.map((p) => `${shortDay(p.date)}, ${num1(p.words_per_set)}`).join("; ") });
+  svg.append(svgEl("line", { x1: 0, x2: W, y1: H - bottom + 0.5, y2: H - bottom + 0.5, class: "base" }));
+  const tip = h("div", { class: "tip" });
+  const fewLabels = band < 46;
+  pts.forEach((p, i) => {
+    const v = Number(p.words_per_set) || 0;
+    const bh = Math.max(2, (H - top - bottom) * (v / max));
+    const x = i * band + (band - bw) / 2, y = H - bottom - bh, r = Math.min(4, bw / 2, bh);
+    const cur = p.workout_id === S.current;
+    const known = S.workouts.some((w) => w.workout_id === p.workout_id);
+    const g = svgEl("g", { class: "bar" + (cur ? " cur" : "") + (known && !cur ? " go" : "") });
+    g.append(svgEl("rect", { x: i * band, y: 0, width: band, height: H, fill: "transparent" }));
+    g.append(svgEl("path", { class: "mark", d: `M${x},${H - bottom} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${H - bottom} Z` }));
+    if (cur || i === pts.length - 1) g.append(svgEl("text", { x: x + bw / 2, y: y - 6, "text-anchor": "middle", class: "val" }, num1(v)));
+    if (!fewLabels || cur || i === 0 || i === pts.length - 1) g.append(svgEl("text", { x: x + bw / 2, y: H - 7, "text-anchor": "middle", class: "lbl" }, shortDay(p.date)));
+    g.addEventListener("mouseenter", () => {
+      tip.textContent = `${day(p.date)}: ${num1(v)} words per set, ${plural(Number(p.sets) || 0, "set", "sets")}, ${plural(Number(p.replies) || 0, "reply", "replies")}${known && !cur ? ". Click to open it." : ""}`;
+      tip.style.left = Math.min(Math.max(x + bw / 2, 120), W - 120) + "px";
+      tip.style.top = y + "px";
+      tip.style.display = "block";
+    });
+    g.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+    if (known && !cur) g.addEventListener("click", () => openGuarded(p.workout_id));
+    svg.append(g);
+  });
+  box.replaceChildren(svg, tip);
+}
+
+// ---------------------------------------------------------------- teach the coach from my notes
+
+const DRAFT_KIND = { rule_for_everyone: "A rule for everyone's coach", app_change: "A change to the app", program: "A change to your program", logged_set: "A logged set to fix" };
+
+function renderTeach() {
+  const box = S.ui.teach;
+  if (!box) return;
+  const np = S.data.notes_pass || {};
+  const last = np.last || null, done = np.last_done || null;
+  const notes = allNotes();
+  const waiting = waitingCount();
+  const running = S.teaching || last?.status === "running";
+  const btn = h("button", { class: "btn", disabled: running || !notes.length }, running ? "Teaching…" : "Teach the coach from my notes");
+  btn.addEventListener("click", teach);
+  const where = !notes.length ? "Tag or note a line below, then teach the coach from it."
+    : waiting ? `${plural(notes.length, "note", "notes")} on this workout, ${waiting === notes.length ? (waiting === 1 ? "not taught yet" : "none taught yet") : waiting + " not taught yet"}.`
+    : `${plural(notes.length, "note", "notes")} on this workout, all taught.`;
+  const msg = S.teachMsg;
+  fill(box,
+    h("div", { class: "row", style: "align-items:center" },
+      h("div", {}, h("strong", {}, "Teach the coach"), h("div", { class: "muted small" }, where, " Notes are also taught every night at 3 a.m.")),
+      btn),
+    msg ? h("div", { class: "status " + (msg.err ? "err" : msg.ok ? "ok" : "muted"), role: "status" }, msg.err || msg.ok || msg.info) : null,
+    !running && last?.status === "failed" && !msg ? h("div", { class: "status err" }, "The last pass didn't work", last.error ? ` (${last.error})` : "", ". It tries again on its own.") : null,
+    done ? passView(done) : null);
+}
+
+function passView(p) {
+  const applied = Array.isArray(p.applied) ? p.applied : [];
+  const drafts = Array.isArray(p.drafts) ? p.drafts : [];
+  const summary = typeof p.summary === "string" ? p.summary : "";
+  return h("div", {},
+    h("div", { class: "muted small" }, "Last taught ", whenOf(p.at), p.cost_usd != null ? ` · cost $${Number(p.cost_usd).toFixed(2)}` : ""),
+    summary ? h("p", { style: "margin:6px 0" }, summary) : null,
+    h("div", { class: "small", style: "margin-top:6px" }, h("strong", {}, "What changed")),
+    applied.length
+      ? h("ul", { class: "small" }, applied.map((c) => h("li", {}, h("span", { class: c.status === "undone" ? "undone" : null }, c.what || c.kind), c.status === "undone" ? h("span", { class: "muted" }, " (undone)") : null)))
+      : h("div", { class: "muted small" }, "Nothing changed."),
+    drafts.length ? h("div", { class: "small", style: "margin-top:8px" }, h("strong", {}, "Drafted for you to decide")) : null,
+    drafts.length ? h("ul", { class: "small" }, drafts.map((x) => h("li", {}, x.title || "", h("span", { class: "muted" }, " · " + (DRAFT_KIND[x.kind] || "Draft"))))) : null,
+    Number(p.rejected) > 0 ? h("div", { class: "muted small", style: "margin-top:6px" }, `${plural(Number(p.rejected), "idea", "ideas")} didn't pass the app's checks and ${Number(p.rejected) === 1 ? "was" : "were"} dropped.`) : null,
+    applied.length || drafts.length ? h("div", { class: "muted small", style: "margin-top:6px" }, "Undo a change, or decide a draft, in What changed on the phone.") : null);
+}
+
+async function teach() {
+  S.teaching = true;
+  S.teachMsg = { info: "Starting…" };
+  renderTeach();
+  const id = S.current;
+  const out = await api("teach", { workout_id: id });
+  if (out.gone || id !== S.current) return;
+  S.teaching = false;
+  if (!out.ok) {
+    S.teachMsg = { err: out.error === "network" ? "Couldn't reach Gym Rat. Try again." : "Couldn't start it. Try again in a minute." };
+    return renderTeach();
+  }
+  const np = S.data.notes_pass || (S.data.notes_pass = {});
+  switch (out.state) {
+    case "started":
+    case "running":
+      np.last = { ...(np.last || {}), pass_id: out.pass_id, status: "running" };
+      S.teachMsg = { info: "Reading your notes. This takes about a minute." };
+      poll();
+      break;
+    case "already_done":
+      S.teachMsg = { info: "Already taught from these notes. Add or change a note to teach it again." };
+      break;
+    case "no_notes":
+      S.teachMsg = { info: "There are no notes on this workout yet." };
+      break;
+    case "capped":
+      S.teachMsg = { err: out.capped === "dollars" ? "Not now: today's spending limit for this is used up. These notes go in the 3 a.m. run." : "Not now: today's limit for this is used up. These notes go in the 3 a.m. run." };
+      break;
+    case "failed":
+      S.teachMsg = { err: "This didn't work after three tries" + (out.error ? ` (${out.error})` : "") + ". Changing a note starts fresh." };
+      break;
+    default:
+      S.teachMsg = { err: "Couldn't start it. Try again in a minute." };
+  }
+  renderTeach();
+}
+
+// While a pass runs: where it stands every 3 seconds, for up to 4 minutes.
+function poll() {
+  clearTimeout(S.pollTimer);
+  const began = Date.now(), id = S.current;
+  const tick = async () => {
+    const out = await api("workout", { workout_id: id });
+    if (out.gone || id !== S.current || !S.data) return;
+    if (out.ok && out.notes_pass) S.data.notes_pass = out.notes_pass;
+    const last = S.data.notes_pass?.last;
+    if (last?.status === "running" || !out.ok) {
+      if (Date.now() - began < 4 * 60 * 1000) { S.pollTimer = setTimeout(tick, 3000); return; }
+      S.teachMsg = { info: "Still working on it. Check back in a few minutes." };
+      if (last) last.status = "waiting";
+    } else if (last?.status === "done") {
+      S.teachMsg = { ok: "Done. Here's what the coach took from your notes." };
+    } else if (last?.status === "failed") {
+      S.teachMsg = { err: "That pass didn't work" + (last.error ? ` (${last.error})` : "") + ". It tries again on its own." };
+    }
+    renderTeach();
+    syncCard();
+  };
+  S.pollTimer = setTimeout(tick, 2500);
+}
+
+// ---------------------------------------------------------------- the lines and his notes
+
+function linesView() {
+  const wrap = h("div", { class: "lines" }, h("div", { class: "lhead" }, h("span", {}, "What was said"), h("span", {}, "Your notes")));
+  S.lineEls = [];
+  S.noteBoxes = [];
+  if (!S.lines.length) wrap.append(h("p", { class: "muted", style: "margin:0;padding:12px 14px" }, "No lines in this workout."));
+  for (const l of S.lines) {
+    const row = lineView(l);
+    S.lineEls.push(row);
+    wrap.append(row);
+  }
+  // The lines with audio, by where they are in the stitched audio, for the highlight.
+  S.cues = S.player ? S.lines.filter((l) => l.audio_timeline_ms != null).map((l) => [Number(l.audio_timeline_ms), l._i]).sort((a, b) => a[0] - b[0]) : [];
+  return wrap;
+}
+
+function lineView(l) {
+  const seekable = !!S.player && l.audio_timeline_ms != null;
+  const tools = (Array.isArray(l.tools) ? l.tools : []).filter((t) => typeof t === "string" && t && !t.startsWith("_"))
+    .map((t) => TOOL_WORDS[t] || t.replace(/_/g, " "));
+  const say = h("div", { class: "say" + (seekable ? " seekable" : ""), role: seekable ? "button" : null, tabindex: seekable ? "0" : null,
+                         title: seekable ? "Play from just before this line" : null },
+    h("div", { class: "meta" },
+      h("span", { class: "who " + (l.side === "coach" ? "coach" : "you") }, l.side === "coach" ? "Coach" : "You"),
+      h("span", {}, timeOf(l.at)),
+      seekable ? h("span", { class: "pos" }, clockOf(l.audio_timeline_ms)) : S.player ? h("span", {}, "no audio") : null,
+      tools.length ? h("span", {}, "· " + [...new Set(tools)].join(", ")) : null),
+    l.not_clear ? h("div", { class: "text unclear" }, "Not clear (the app couldn't make out what was said)") : h("div", { class: "text" }, l.text ?? ""));
+  if (seekable) {
+    const go = () => { S.player.playFrom(Number(l.audio_timeline_ms) - 1500); setHighlight(l._i); };
+    say.addEventListener("click", () => { if (!String(getSelection() || "").trim()) go(); });
+    say.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+  }
+  const box = h("div", { class: "notes" });
+  S.noteBoxes[l._i] = box;
+  fillNotes(l);
+  return h("div", { class: "line " + (l.side === "coach" ? "coach" : "you") }, say, box);
+}
+
+function fillNotes(l) {
+  const box = S.noteBoxes[l._i];
+  if (!box) return;
+  const notes = l.notes;
+  const row = h("div", { class: "tagrow" });
+  for (const t of TAGS_FOR[l.side === "coach" ? "coach" : "you"]) {
+    const on = notes.some((n) => n.tag === t);
+    row.append(h("button", { class: "tagbtn t-" + t + (on ? " on" : ""), "aria-pressed": on ? "true" : "false", disabled: l._busy,
+                             title: t === "say_this" ? "Write what the coach should have said" : on ? "Tap again to take it off" : null,
+                             onclick: () => onTag(l, t) }, TAG_BUTTON[t]));
+  }
+  row.append(h("button", { class: "tagbtn", disabled: l._busy, onclick: () => openForm(l, null, null) }, "Note"));
+  box.replaceChildren(row);
+  if (l._form && l._form.noteId == null) box.append(formView(l));
+  for (const n of notes) box.append(l._form?.noteId === n.note_id ? formView(l) : noteView(l, n));
+  if (l._err) box.append(h("p", { class: "err lerr", role: "alert" }, l._err));
+}
+
+function noteView(l, n) {
+  const text = String(n.text ?? n.note ?? "").trim();
+  const sure = l._confirm === n.note_id;
+  return h("div", { class: "note" },
+    n.tag ? h("span", { class: "pill t-" + n.tag }, TAG_WORDS[n.tag] || n.tag) : null,
+    n.tag === "say_this" && n.better_line ? h("div", { class: "better" }, "“", n.better_line, "”") : null,
+    text ? h("div", { class: "ntext" }, text) : null,
+    h("div", { class: "nact" },
+      h("span", { class: "muted" }, whenOf(n.updated_at || n.at)),
+      h("button", { class: "link", disabled: l._busy, onclick: () => openForm(l, n, n.tag) }, "Edit"),
+      h("button", { class: "link" + (sure ? " sure" : ""), disabled: l._busy, onclick: () => askDelete(l, n) }, sure ? "Delete it?" : "Delete")));
+}
+
+function askDelete(l, n) {
+  if (l._confirm === n.note_id) {
+    l._confirm = null;
+    return save(l, { note_id: n.note_id, note: "" });
+  }
+  l._confirm = n.note_id;
+  fillNotes(l);
+  setTimeout(() => { if (l._confirm === n.note_id) { l._confirm = null; fillNotes(l); } }, 4000);
+}
+
+// The one-tap tags: on if a note on this line has it, and a second tap takes it off (the note goes if it was only the tag).
+function onTag(l, t) {
+  const n = l.notes.find((x) => x.tag === t);
+  if (t === "say_this") return openForm(l, n || null, "say_this");
+  if (!n) return save(l, { note: "", tag: t });
+  if (!String(n.text ?? "").trim()) return save(l, { note_id: n.note_id, note: "" });
+  return save(l, { note_id: n.note_id, note: String(n.text ?? ""), tag: "", better_line: "" });
+}
+
+// A note being written on this line that has words in it and isn't saved yet.
+const formDirty = (f) => !!f && !!(String(f.text || "").trim() || String(f.better || "").trim());
+
+function openForm(l, n, tag) {
+  if (l._busy) return;
+  const f = l._form;
+  // Already open on this note: just back to it.
+  if (f && f.noteId === (n ? n.note_id : null) && (n || f.tag === tag)) {
+    S.noteBoxes[l._i]?.querySelector(".form textarea")?.focus();
+    return;
+  }
+  if (formDirty(f) && !confirm("You have a note on this line that isn't saved. Drop it?")) return;
+  l._err = null;
+  l._form = { noteId: n ? n.note_id : null, tag: n ? (n.tag || null) : tag, better: n?.better_line || "", text: n ? String(n.text ?? "") : "" };
+  fillNotes(l);
+  const first = S.noteBoxes[l._i]?.querySelector(".form textarea");
+  if (first) { first.focus(); first.setSelectionRange(first.value.length, first.value.length); }
+}
+
+function formView(l) {
+  const f = l._form;
+  const editing = f.noteId != null;
+  const keys = (e) => {
+    if (e.key === "Escape") { e.preventDefault(); l._form = null; l._err = null; fillNotes(l); }
+    else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(l); }
+  };
+  const parts = [];
+  if (editing) {
+    // Editing: the tag can change too, or come off.
+    const pick = h("div", { class: "tagrow" });
+    for (const t of [null, ...TAGS_FOR[l.side === "coach" ? "coach" : "you"]]) {
+      pick.append(h("button", { class: "tagbtn" + (t ? " t-" + t : "") + (f.tag === t ? " on" : ""), "aria-pressed": f.tag === t ? "true" : "false",
+                                style: !t && f.tag === null ? "background:#3a3a40;color:var(--text)" : null,
+                                onclick: () => { f.tag = t; fillNotes(l); S.noteBoxes[l._i]?.querySelector(".form textarea")?.focus(); } },
+        t ? TAG_WORDS[t] : "No tag"));
+    }
+    parts.push(pick);
+  }
+  if (f.tag === "say_this") {
+    const count = h("span", { class: "count" }, `${f.better.length}/300`);
+    const better = h("textarea", { maxlength: "300", rows: "2", placeholder: "What the coach should have said", "aria-label": "What the coach should have said", value: f.better });
+    better.addEventListener("input", () => { f.better = better.value; count.textContent = `${better.value.length}/300`; });
+    better.addEventListener("keydown", keys);
+    parts.push(h("label", {}, l.side === "coach" ? "Say it like this instead" : "After this line, the coach should have said"), better, count);
+  }
+  const text = h("textarea", { maxlength: "2000", rows: "2", placeholder: f.tag === "say_this" ? "Why, or anything else (optional)" : f.tag ? "Anything to add (optional)" : "Your note",
+                               "aria-label": "Your note", value: f.text });
+  text.addEventListener("input", () => { f.text = text.value; });
+  text.addEventListener("keydown", keys);
+  parts.push(text);
+  parts.push(h("div", { class: "acts" },
+    h("button", { class: "btn", disabled: l._busy, onclick: () => submit(l) }, l._busy ? "Saving…" : "Save"),
+    h("button", { class: "btn ghost", disabled: l._busy, onclick: () => { l._form = null; l._err = null; fillNotes(l); } }, "Cancel"),
+    h("span", { class: "muted small" }, "⌘↩ saves · Esc cancels")));
+  return h("div", { class: "form" }, parts);
+}
+
+async function submit(l) {
+  const f = l._form;
+  if (!f || l._busy) return;
+  const text = String(f.text || "").trim(), better = String(f.better || "").replace(/\s+/g, " ").trim();
+  if (f.tag === "say_this" && !better) { l._err = "Write what the coach should have said."; return fillNotes(l); }
+  if (!f.tag && !text) { l._err = f.noteId != null ? "Write a note or pick a tag. To remove it, use Delete." : "Write a note first."; return fillNotes(l); }
+  const payload = f.noteId != null
+    ? { note_id: f.noteId, note: text, tag: f.tag || "", better_line: f.tag === "say_this" ? better : "" }
+    : { note: text, tag: f.tag || undefined, better_line: f.tag === "say_this" ? better : undefined };
+  await save(l, payload, true);
+}
+
+// One note saved, changed or removed through the phone's own path (turn_note), then shown as the server has it. Only
+// the form's own Save closes the form: a tag tapped or a note deleted while he writes one leaves what he's writing,
+// unless it was the note being edited that went.
+async function save(l, payload, fromForm = false) {
+  l._busy = true;
+  l._err = null;
+  fillNotes(l);
+  const id = S.current;
+  const out = await api("turn_note", { turn_id: l.turn_id, side: l.side, ...payload });
+  if (out.gone || id !== S.current) return false;
+  l._busy = false;
+  if (!out.ok || !out.note) {
+    l._err = out.error === "network" ? "Couldn't reach Gym Rat. Check your connection and try again."
+      : out.detail ? "Couldn't save: " + out.detail + "." : "Couldn't save that. Try again.";
+    fillNotes(l);
+    return false;
+  }
+  const n = out.note;
+  if (n.removed) l.notes = l.notes.filter((x) => x.note_id !== n.note_id);
+  else {
+    const kept = { note_id: n.note_id, note: n.note, text: n.text, tag: n.tag ?? null, better_line: n.better_line ?? null, at: n.at, updated_at: n.updated_at };
+    const i = l.notes.findIndex((x) => x.note_id === n.note_id);
+    if (i >= 0) l.notes[i] = kept; else l.notes.push(kept);
+  }
+  if (fromForm || (l._form && l._form.noteId != null && !l.notes.some((x) => x.note_id === l._form.noteId))) l._form = null;
+  S.teachMsg = null;
+  fillNotes(l);
+  notesChanged();
+  return true;
+}
+
+// The counts that follow the notes: the silent tile, the teach box, the list's numbers, the marks on the scrubber.
+function notesChanged() {
+  renderMetrics();
+  renderTeach();
+  S.player?.marks();
+  syncCard();
+}
+// This workout's row in the list, from what the page has now.
+function syncCard() {
+  const card = S.workouts.find((w) => w.workout_id === S.current);
+  if (!card || !S.data) return;
+  const notes = allNotes();
+  card.metrics = { ...(card.metrics || {}), notes: notes.length, silent_tags: tagCount("silent") };
+  card.notes_pass = { ...(card.notes_pass || {}), waiting: waitingCount(), last: S.data.notes_pass?.last ?? null };
+  renderList();
+}
+// Notes added or changed since the newest note a finished pass read (the server's notes_through, as "through"), the
+// way the server counts them: a note made while a pass ran is still waiting after it. A server without "through" counts
+// from when the last pass finished.
+function waitingCount() {
+  const np = S.data?.notes_pass || {};
+  const at = np.through ?? (Object.prototype.hasOwnProperty.call(np, "through") ? null : np.last_done?.at);
+  const mark = at ? Date.parse(at) : -Infinity;
+  return allNotes().filter((n) => Date.parse(n.updated_at || n.at) > mark).length;
+}
+
+// ---------------------------------------------------------------- the line being heard
+
+function setHighlight(i, scroll) {
+  if (i === S.hl) return;
+  S.lineEls[S.hl]?.classList.remove("now");
+  S.hl = i;
+  const el = S.lineEls[i];
+  if (!el) return;
+  el.classList.add("now");
+  if (scroll && Date.now() > S.followPausedUntil && !typing(document.activeElement)) follow(el);
+}
+// The last line at or before this moment (a little early, so it lights as it starts).
+function highlightAt(ms, scroll) {
+  const c = S.cues;
+  if (!c.length) return;
+  let lo = 0, hi = c.length - 1, at = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (c[mid][0] <= ms + 250) { at = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  setHighlight(at >= 0 ? c[at][1] : -1, scroll);
+}
+// Keeps the line in view below the player, unless he scrolled away himself a moment ago.
+function follow(el) {
+  const r = el.getBoundingClientRect();
+  const top = (S.player?.box?.getBoundingClientRect().bottom ?? 0) + 12, bottom = innerHeight - 48;
+  if (r.top >= top && r.bottom <= bottom) return;
+  scrollTo({ top: scrollY + r.top - top - Math.max(0, (bottom - top) * 0.25), behavior: "smooth" });
+}
+const pauseFollow = (e) => { if (!(e?.target?.closest && e.target.closest(".side"))) S.followPausedUntil = Date.now() + 6000; };
+addEventListener("wheel", pauseFollow, { passive: true });
+addEventListener("touchmove", pauseFollow, { passive: true });
+
+// ---------------------------------------------------------------- the player: one timeline over the 2-minute pieces
+
+// The pieces in the server's order (started_at, seq, id), each starting where the last ended: the same timeline the
+// lines' audio_timeline_ms are on, with any gap between pieces left out.
+function buildTimeline(segments) {
+  const list = (Array.isArray(segments) ? segments : []).slice()
+    .sort((a, b) => Date.parse(a.started_at) - Date.parse(b.started_at) || a.seq - b.seq || a.segment_id - b.segment_id);
+  let at = 0;
+  return list.map((s) => {
+    const seg = { id: Number(s.segment_id), seq: s.seq, start: at, dur: Math.max(0, Number(s.duration_ms) || 0), url: null };
+    at += seg.dur;
+    return seg;
+  }).filter((s) => s.dur > 0);
+}
+
+class Player {
+  constructor(segs, workoutId) {
+    this.segs = segs;
+    this.workoutId = workoutId;
+    this.total = segs.reduce((n, s) => n + s.dur, 0);
+    // Two players: one plays, the other loads the next piece so the switch is quick.
+    this.els = [new Audio(), new Audio()];
+    this.cur = 0; this.idx = -1; this.nextIdx = -1;
+    this.playing = false; this.pos = 0; this.known = 0;
+    const saved = Number(prefs.get("rate", 1));
+    this.rate = SPEEDS.includes(saved) ? saved : 1;
+    this.linksAt = 0; this.linksP = null; this.lastFix = 0; this.goTok = 0; this.raf = 0; this.dead = false; this.dragging = false;
+    this.lastSecond = -1; this.msgTimer = 0; this.u = {}; this.box = null;
+    for (const el of this.els) {
+      el.preload = "auto";
+      el.addEventListener("ended", () => this.onEnded(el));
+      el.addEventListener("error", () => this.onError(el));
+      el.addEventListener("timeupdate", () => { if (el === this.el) this.tick(); });
+      for (const ev of ["playing", "waiting", "canplay"]) el.addEventListener(ev, () => { if (el === this.el) this.ui(); });
+    }
+  }
+  get el() { return this.els[this.cur]; }
+  linksFresh() { return this.linksAt > 0 && Date.now() - this.linksAt < LINK_LIFE_MS - Math.min(5 * 60 * 1000, LINK_LIFE_MS / 5); }
+  segAt(ms) {
+    for (let i = this.segs.length - 1; i >= 0; i--) if (ms >= this.segs[i].start) return i;
+    return 0;
+  }
+  // Whether a player has this piece in it and nothing went wrong (its link may be an older one that still works).
+  holds(el, s) { return !!s && el.dataset.seg === String(s.id) && !el.error && !!el.getAttribute("src"); }
+  now() {
+    const s = this.segs[this.idx];
+    if (this.holds(this.el, s) && this.el.readyState >= 1) return Math.min(s.start + this.el.currentTime * 1000, s.start + s.dur);
+    return this.pos;
+  }
+
+  // Fresh signed links for every piece (they last an hour): when they're about to run out, and when one fails.
+  links(force) {
+    if (!force && this.linksFresh()) return Promise.resolve(true);
+    if (this.linksP) return this.linksP;
+    this.linksP = (async () => {
+      const out = await api("audio_playback", { workout_id: this.workoutId });
+      if (this.dead || out.gone) return false;
+      if (!out.ok) {
+        this.say(out.error === "network" ? "Couldn't reach Gym Rat for the audio. Press play to try again." : "Couldn't get the audio. Press play to try again.", true);
+        return false;
+      }
+      const byId = new Map((out.segments || []).map((s) => [Number(s.segment_id), s.url || null]));
+      for (const s of this.segs) s.url = byId.get(s.id) ?? null;
+      if (!this.segs.some((s) => s.url)) { this.say("This workout's audio couldn't be found. All its lines are below.", true); return false; }
+      const renewed = this.linksAt > 0;
+      this.linksAt = Date.now();
+      this.nextIdx = -1;
+      if (renewed) { console.info("review: audio links renewed"); if (DEMO) this.say("Audio links renewed."); }
+      else this.say("");
+      if (this.playing) this.preloadNext();
+      this.ui();
+      return true;
+    })().finally(() => { this.linksP = null; });
+    return this.linksP;
+  }
+  prepare() {
+    this.links().then((ok) => { if (ok && this.idx < 0 && !this.dead) this.load(0, 0, false); });
+  }
+
+  // Gives a player a piece's current link, unless it already has it.
+  put(el, s) {
+    if (el.dataset.seg === String(s.id) && el.dataset.url === s.url && !el.error && el.getAttribute("src")) return;
+    el.src = s.url;
+    el.dataset.url = s.url;
+    el.dataset.seg = String(s.id);
+  }
+  // Puts piece i in the playing player at off ms, and plays it if asked.
+  load(i, off, play) {
+    const s = this.segs[i];
+    if (!s) return;
+    this.idx = i;
+    this.pos = s.start + off;
+    if (!s.url) return this.skipBroken(i);
+    const el = this.el;
+    this.put(el, s);
+    el.defaultPlaybackRate = this.rate;
+    el.playbackRate = this.rate;
+    const t = Math.max(0, off / 1000);
+    const tok = ++this.goTok;
+    if (el.readyState >= 1) el.currentTime = Math.min(t, el.duration || t);
+    else {
+      try { el.currentTime = t; } catch {}
+      el.addEventListener("loadedmetadata", () => {
+        if (tok === this.goTok && el === this.el && Math.abs(el.currentTime - t) > 0.3) el.currentTime = Math.min(t, el.duration || t);
+      }, { once: true });
+    }
+    if (play) this.start(el);
+    this.ui();
+  }
+  start(el) {
+    el.playbackRate = this.rate;
+    const p = el.play();
+    if (p) p.catch((e) => { if (e?.name === "NotAllowedError" && el === this.el) { this.playing = false; this.ui(); } });
+    this.preloadNext();
+    this.loop();
+  }
+  preloadNext() {
+    const n = this.idx + 1, s = this.segs[n];
+    if (!s || !s.url || this.nextIdx === n) return;
+    const o = this.els[1 - this.cur];
+    o.pause();
+    this.put(o, s);
+    this.nextIdx = n;
+  }
+  // To piece i at off ms, after fresh links if they're due.
+  async go(i, off) {
+    const tok = ++this.goTok;
+    this.idx = i;
+    this.pos = this.segs[i].start + off;
+    if (!this.linksFresh()) {
+      this.ui();
+      const ok = await this.links();
+      if (!ok) { this.playing = false; this.ui(); return; }
+      if (tok !== this.goTok || this.dead) return;
+    }
+    this.load(i, off, this.playing);
+  }
+  onEnded(el) {
+    if (el !== this.el || this.dead) return;
+    const n = this.idx + 1;
+    if (n >= this.segs.length) { this.playing = false; this.pos = this.total; this.ui(); this.tick(); return; }
+    const o = this.els[1 - this.cur];
+    if (this.playing && this.nextIdx === n && this.holds(o, this.segs[n])) {
+      this.cur = 1 - this.cur;
+      this.idx = n;
+      this.nextIdx = -1;
+      this.goTok++;
+      o.defaultPlaybackRate = this.rate;
+      if (o.currentTime) o.currentTime = 0;
+      this.start(o);
+      this.ui();
+    } else {
+      this.go(n, 0);
+    }
+  }
+  // A link that ran out, or a piece that won't load: fresh links once, back to the same spot; still failing, skip it.
+  onError(el) {
+    if (this.dead || !el.getAttribute("src")) return;
+    el.removeAttribute("src");
+    el.dataset.url = "";
+    el.dataset.seg = "";
+    if (el !== this.el) {
+      this.nextIdx = -1;
+      if (Date.now() - this.lastFix > 15000) { this.lastFix = Date.now(); this.links(true).then((ok) => { if (ok && this.playing) this.preloadNext(); }); }
+      return;
+    }
+    const s = this.segs[this.idx];
+    if (!s) return;
+    const off = Math.max(0, Math.min(this.known, s.start + s.dur) - s.start);
+    if (Date.now() - this.lastFix > 15000) {
+      this.lastFix = Date.now();
+      const tok = ++this.goTok;
+      this.links(true).then((ok) => { if (ok && !this.dead && tok === this.goTok) this.load(this.idx, off, this.playing); });
+      return;
+    }
+    this.skipBroken(this.idx);
+  }
+  skipBroken(i) {
+    const s = this.segs[i];
+    this.say(`Couldn't play the audio from ${clockOf(s.start)} to ${clockOf(s.start + s.dur)}, so it was skipped.`, true);
+    if (i + 1 < this.segs.length) this.go(i + 1, 0);
+    else { this.playing = false; this.ui(); }
+  }
+
+  toggle() { this.playing ? this.pause() : this.play(); }
+  play() {
+    if (!this.segs.length) return;
+    let at = this.now();
+    if (at >= this.total - 250) at = 0;
+    this.playing = true;
+    const i = this.segAt(at), s = this.segs[i];
+    // Straight from the click when the piece is ready, so the browser lets it play; fresh links follow if they're due.
+    if (this.idx === i && this.holds(this.el, s)) {
+      if (at === 0 && this.el.currentTime) this.el.currentTime = 0;
+      this.start(this.el);
+      if (!this.linksFresh()) this.links();
+    } else this.go(i, at - s.start);
+    this.ui();
+  }
+  pause() {
+    this.pos = this.now();
+    this.playing = false;
+    for (const el of this.els) el.pause();
+    cancelAnimationFrame(this.raf);
+    this.ui();
+  }
+  seek(ms, scroll) {
+    if (!this.segs.length) return;
+    ms = Math.max(0, Math.min(ms, this.total - 1));
+    const i = this.segAt(ms), s = this.segs[i], off = ms - s.start;
+    this.pos = ms;
+    this.known = ms;
+    if (i === this.idx && this.holds(this.el, s) && this.el.readyState >= 1) {
+      this.el.currentTime = off / 1000;
+      if (this.playing) this.start(this.el);
+      if (!this.linksFresh()) this.links();
+    } else this.go(i, off);
+    this.ui();
+    this.tick(scroll);
+  }
+  playFrom(ms) { this.playing = true; this.seek(ms); }
+  skip(d) { this.seek(this.now() + d, true); }
+  setRate(r) {
+    this.rate = r;
+    prefs.set("rate", r);
+    for (const el of this.els) { el.defaultPlaybackRate = r; el.playbackRate = r; }
+    this.ui();
+  }
+  loop() {
+    cancelAnimationFrame(this.raf);
+    const step = () => { if (this.dead) return; this.tick(); if (this.playing) this.raf = requestAnimationFrame(step); };
+    this.raf = requestAnimationFrame(step);
+  }
+  // Where the audio is now: the clock, the scrubber, the line lit up.
+  tick(scroll) {
+    if (this.dead) return;
+    const at = this.now();
+    this.known = at;
+    const sec = Math.floor(at / 1000);
+    if (sec !== this.lastSecond && !this.dragging) {
+      this.lastSecond = sec;
+      if (this.u.timeNow) this.u.timeNow.textContent = clockOf(at);
+    }
+    if (this.u.range && !this.dragging) this.u.range.value = String(Math.round(at));
+    if (!this.dragging) highlightAt(at, this.playing || scroll);
+  }
+  say(text, bad) {
+    if (!this.u.msg) return;
+    clearTimeout(this.msgTimer);
+    this.u.msg.textContent = text;
+    this.u.msg.className = "pmsg " + (bad ? "err" : "muted");
+    if (text && !bad) this.msgTimer = setTimeout(() => { if (this.u.msg) this.u.msg.textContent = ""; }, 4000);
+  }
+  // The controls as they stand: play or pause, waiting for audio, the speed picked.
+  ui() {
+    const u = this.u;
+    if (!u.play) return;
+    const waiting = this.playing && (this.el.readyState < 3 || this.idx < 0);
+    u.play.replaceChildren(icon(this.playing ? "pause" : "play"));
+    u.play.setAttribute("aria-label", this.playing ? "Pause" : "Play");
+    u.play.title = waiting ? "Loading the audio…" : this.playing ? "Pause" : "Play";
+    u.play.style.opacity = waiting ? ".7" : "";
+    for (const b of u.speeds || []) b.setAttribute("aria-pressed", String(Number(b.dataset.rate) === this.rate));
+  }
+
+  view() {
+    const btn = (cls, label, kids, fn) => { const b = h("button", { class: "pbtn " + cls, "aria-label": label, title: label }, kids); b.addEventListener("click", fn); return b; };
+    const u = this.u;
+    u.play = btn("play", "Play", icon("play"), () => this.toggle());
+    const back = btn("", "Back 10 seconds", [icon("back"), "10"], () => this.seek(this.now() - 10000, true));
+    const ahead = btn("", "Ahead 10 seconds", ["10", icon("ahead")], () => this.seek(this.now() + 10000, true));
+    u.timeNow = h("b", {}, "0:00");
+    u.speeds = SPEEDS.map((r) => {
+      const b = h("button", { class: "tab", "data-rate": String(r), "aria-pressed": String(r === this.rate), "aria-label": `Speed ${r} times` }, r + "×");
+      b.addEventListener("click", () => this.setRate(r));
+      return b;
+    });
+    // Arrow keys on the scrubber mean 5 seconds, like everywhere else on the page (the page's own keys take them).
+    u.range = h("input", { type: "range", min: "0", max: String(Math.max(1, this.total)), step: "100", value: "0", "aria-label": "Where you are in the workout's audio" });
+    u.range.addEventListener("input", () => {
+      this.dragging = true;
+      const at = Number(u.range.value);
+      u.timeNow.textContent = clockOf(at);
+      highlightAt(at, true);
+    });
+    u.range.addEventListener("change", () => { this.dragging = false; this.seek(Number(u.range.value), true); });
+    u.marksBar = h("div", { class: "marks", "aria-hidden": "true" });
+    u.msg = h("p", { class: "pmsg", role: "status" });
+    this.box = h("div", { class: "player", role: "region", "aria-label": "Workout audio" },
+      h("div", { class: "controls" }, u.play, back, ahead,
+        h("span", { class: "time" }, u.timeNow, " / " + clockOf(this.total)),
+        h("div", { class: "speeds", role: "group", "aria-label": "Speed" }, u.speeds)),
+      h("div", { class: "scrub" }, u.marksBar, u.range),
+      u.msg,
+      h("p", { class: "keys" }, "Space plays or pauses · ← → go back or ahead 5 seconds · Click a line to hear it"));
+    this.ui();
+    return this.box;
+  }
+  // The marks over the scrubber: where his notes are, in their tag's color.
+  marks() {
+    const bar = this.u.marksBar;
+    if (!bar || !this.total) return;
+    bar.replaceChildren(...S.lines.filter((l) => l.audio_timeline_ms != null && l.notes.length).map((l) =>
+      h("i", { class: "t-" + (l.notes.find((n) => n.tag)?.tag || "note"), style: `left:${Math.min(100, (Number(l.audio_timeline_ms) / this.total) * 100)}%` })));
+  }
+  destroy() {
+    this.dead = true;
+    cancelAnimationFrame(this.raf);
+    clearTimeout(this.msgTimer);
+    for (const el of this.els) { el.pause(); el.removeAttribute("src"); el.dataset.url = ""; el.dataset.seg = ""; try { el.load(); } catch {} }
+  }
+}
+
+// Keys: space plays or pauses, ← and → go back or ahead 5 seconds; never while typing a note.
+addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+  if (["PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(e.key)) pauseFollow(e);
+  const p = S.player;
+  if (!p) return;
+  if (e.key === " " || e.code === "Space") { e.preventDefault(); if (!e.repeat) p.toggle(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); p.skip(-5000); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); p.skip(5000); }
+});
+// A focused button doesn't also take the space (it would tap the last tag again).
+addEventListener("keyup", (e) => { if ((e.key === " " || e.code === "Space") && S.player && !typing(e.target)) e.preventDefault(); });
+
+// ---------------------------------------------------------------- demo: review.html?demo=1, made-up data, no server
+
+class DemoServer {
+  constructor(raw) {
+    this.raw = raw;
+    LINK_LIFE_MS = Math.max(30, Number(raw.link_life_s) || 90) * 1000;
+    this.noteId = 50000;
+    this.passId = 700;
+    this.wavs = new Map();
+    this.expiredOnce = new Set();
+    this.workouts = (raw.workouts || []).map((w) => this.build(w));
+    this.empty = params.get("as") === "empty";
+  }
+  // The server's shapes, worked out the way gr_review_workout does: each line's piece, its offset, and its place on
+  // the stitched timeline; a line said in a gap between pieces, or after the last, has none.
+  build(w) {
+    const start = Date.parse(w.started_at);
+    let before = 0;
+    const segments = (w.segments || []).map((s, i) => {
+      const seg = { segment_id: w.workout_id * 100 + i, seq: i, started_at: new Date(start + s.at_s * 1000).toISOString(), duration_ms: Math.round(s.dur_s * 1000),
+                    path: `demo/${w.workout_id}/${i}.wav`, before_ms: before, at_ms: start + s.at_s * 1000 };
+      before += seg.duration_ms;
+      return seg;
+    });
+    const doneAt = w.notes_pass?.last_done?.at ? Date.parse(w.notes_pass.last_done.at) : start + 3 * 3600e3;
+    let turn = w.workout_id * 1000, prev = null, k = 0;
+    const lines = (w.lines || []).map((x) => {
+      if (x.side === "you" || !(prev && prev.side === "you")) turn++;
+      const at = start + x.t * 1000;
+      const seg = segments.filter((s) => s.at_ms <= at && at < s.at_ms + s.duration_ms).pop();
+      const off = seg ? at - seg.at_ms : null;
+      const line = {
+        turn_id: turn, side: x.side, at: new Date(at).toISOString(), text: x.not_clear ? null : x.text, not_clear: !!x.not_clear,
+        tools: x.side === "coach" ? (x.tools || []) : null,
+        audio_segment_id: seg ? seg.segment_id : null, audio_offset_ms: seg ? Math.round(off) : null, audio_timeline_ms: seg ? Math.round(off + seg.before_ms) : null,
+        notes: (x.notes || []).map((n) => {
+          const when = new Date(doneAt + (n.new ? 1 : -1) * (++k) * 60e3).toISOString();
+          const tag = n.tag || null, better = tag === "say_this" ? n.better_line : null;
+          return { note_id: ++this.noteId, note: this.shown(n.text || "", tag, better), text: n.text || "", tag, better_line: better, at: when, updated_at: when };
+        }),
+      };
+      prev = x;
+      return line;
+    });
+    const out = { ...w, segments, lines, notes_pass: JSON.parse(JSON.stringify(w.notes_pass || {})) };
+    if (w.taught) out.passKey = this.batchKey(out);
+    return out;
+  }
+  shown(text, tag, better) {
+    const label = { silent: "Should've been silent", too_long: "Too long", wrong: "Wrong", say_this: "Say it like this: " + (better || "") }[tag];
+    return [label, String(text || "").trim()].filter(Boolean).join(" · ");
+  }
+  notesOf(w) { return w.lines.flatMap((l) => l.notes); }
+  batchKey(w) { return this.notesOf(w).map((n) => n.note_id + ":" + n.updated_at).sort().join(","); }
+  metrics(w) {
+    const said = w.lines.filter((l) => l.side === "coach" && typeof l.text === "string");
+    const words = said.reduce((n, l) => n + l.text.trim().split(/\s+/).filter(Boolean).length, 0);
+    const notes = this.notesOf(w), count = (t) => notes.filter((n) => n.tag === t).length;
+    const sets = Number(w.sets) || 0;
+    return {
+      replies: said.length, words, sets, words_per_set: sets ? Math.round((words / sets) * 10) / 10 : 0,
+      got_it: said.filter((l) => /\bgot it\b/i.test(l.text)).length,
+      silent_tags: count("silent"), too_long_tags: count("too_long"), wrong_tags: count("wrong"), say_this_tags: count("say_this"), notes: notes.length,
+      cut_off: w.cut_off ?? null, cut_off_from: w.cut_off == null ? null : w.cut_off_from || "phone", counted_by: w.counted_by || "page",
+    };
+  }
+  // As gr_private.notes_pass_state: waiting counts from through, the newest note the last finished pass read.
+  passState(w, full) {
+    const np = w.notes_pass;
+    const through = np.through ?? np.last_done?.at ?? null;
+    const mark = through ? Date.parse(through) : -Infinity;
+    const out = { waiting: this.notesOf(w).filter((n) => Date.parse(n.updated_at) > mark).length, through, last: np.last || null };
+    if (full) out.last_done = np.last_done || null;
+    return out;
+  }
+  card(w) {
+    return { workout_id: w.workout_id, date: w.date, focus: w.focus, started_at: w.started_at, ended_at: w.ended_at, metrics: this.metrics(w),
+             has_audio: w.segments.length > 0, audio_deleted: !!w.audio_deleted, self_review: w.counted_by === "review" ? "done" : null, notes_pass: this.passState(w, false) };
+  }
+  trend() {
+    return (this.raw.trend || []).map((p) => {
+      const w = this.workouts.find((x) => x.workout_id === p.workout_id);
+      if (!w) return p;
+      const m = this.metrics(w);
+      return { workout_id: w.workout_id, date: w.date, words_per_set: m.words_per_set, sets: m.sets, replies: m.replies };
+    });
+  }
+  find(id) { return this.workouts.find((w) => w.workout_id === Number(id)); }
+  fail(detail) { return { error: "server", detail }; }
+  async handle(op, x) {
+    await sleep(150 + Math.random() * 250);
+    const copy = (v) => JSON.parse(JSON.stringify(v));
+    switch (op) {
+      case "list": {
+        if (this.empty) return { ok: true, workouts: [] };
+        const list = this.workouts.filter((w) => !x.before || w.date < x.before).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.workout_id - a.workout_id));
+        return { ok: true, workouts: copy(list.slice(0, Number(x.limit) || 60).map((w) => this.card(w))) };
+      }
+      case "workout": {
+        const w = this.find(x.workout_id);
+        if (!w) return this.fail("workout not found");
+        return copy({
+          ok: true,
+          review: { workout: { workout_id: w.workout_id, date: w.date, focus: w.focus, started_at: w.started_at, ended_at: w.ended_at },
+                    lines: w.lines, audio: { segments: w.segments.map(({ segment_id, seq, started_at, duration_ms, path }) => ({ segment_id, seq, started_at, duration_ms, path })), deleted: !!w.audio_deleted } },
+          metrics: this.metrics(w), trend: this.trend(), notes_pass: this.passState(w, true),
+        });
+      }
+      case "turn_note": return copy(this.turnNote(x));
+      case "audio_playback": return this.playback(x);
+      case "teach": return this.teach(x);
+    }
+    return { error: "bad_request" };
+  }
+  // gr_turn_note's rules, as written in the migration.
+  turnNote(x) {
+    const tags = ["silent", "too_long", "wrong", "say_this"];
+    const pTag = typeof x.tag === "string" ? x.tag : null, pBetter = typeof x.better_line === "string" ? x.better_line : null;
+    let note = String(x.note ?? "").trim().slice(0, 2000);
+    let better = (pBetter ?? "").replace(/\s+/g, " ").trim().slice(0, 300) || null;
+    if (pTag && !tags.includes(pTag)) return this.fail("not a tag");
+    if (/#fail/i.test(note)) return this.fail("the demo turned this one down on purpose");
+    const now = new Date().toISOString();
+    const out = (l, n) => ({ ok: true, note: { note_id: n.note_id, turn_id: l.turn_id, side: l.side, note: n.note, text: n.text, tag: n.tag, better_line: n.better_line, at: n.at, updated_at: n.updated_at } });
+    if (x.note_id) {
+      let line = null, n = null;
+      for (const w of this.workouts) for (const l of w.lines) { const f = l.notes.find((y) => y.note_id === Number(x.note_id)); if (f) { line = l; n = f; } }
+      if (!n) return this.fail("note not found");
+      const remove = () => { line.notes = line.notes.filter((y) => y !== n); return { ok: true, note: { removed: true, note_id: n.note_id } }; };
+      if (note === "" && pTag == null && pBetter == null) return remove();
+      if (pTag == null && n.tag) {
+        const label = this.shown("", n.tag, n.better_line);
+        if (note === label) note = ""; else if (note.startsWith(label + " · ")) note = note.slice(label.length + 3).trim();
+      }
+      const tag = pTag == null ? n.tag : pTag || null;
+      better = tag !== "say_this" ? null : pBetter == null ? n.better_line : better;
+      if (tag === "say_this" && !better) return this.fail("say what it should have said");
+      if (note === "" && !tag) return remove();
+      Object.assign(n, { text: note, tag, better_line: better, note: this.shown(note, tag, better), updated_at: now });
+      return out(line, n);
+    }
+    const tag = pTag || null;
+    if (tag !== "say_this") better = null;
+    if (!note && !tag) return this.fail("the note is empty");
+    if (tag === "say_this" && !better) return this.fail("say what it should have said");
+    if (!["you", "coach"].includes(x.side)) return this.fail("side must be you or coach");
+    const line = this.workouts.flatMap((w) => w.lines).find((l) => l.turn_id === Number(x.turn_id) && l.side === x.side);
+    if (!line) return this.fail("line not found");
+    const n = { note_id: ++this.noteId, text: note, tag, better_line: better, note: this.shown(note, tag, better), at: now, updated_at: now };
+    line.notes.push(n);
+    return out(line, n);
+  }
+  // Links that act like the real ones: a new one each time, and each stops working after link_life_s. The first time,
+  // one piece's link has already run out, so the page has to get fresh ones.
+  playback(x) {
+    const w = this.find(x.workout_id);
+    if (!w) return this.fail("workout not found");
+    const segments = w.segments.map((s, i) => {
+      const url = URL.createObjectURL(this.wav(w, i));
+      const life = !this.expiredOnce.has(w.workout_id) && i === Number(w.expired_link) ? 0 : LINK_LIFE_MS;
+      setTimeout(() => URL.revokeObjectURL(url), life);
+      return { segment_id: s.segment_id, seq: s.seq, started_at: s.started_at, duration_ms: s.duration_ms, url };
+    });
+    this.expiredOnce.add(w.workout_id);
+    return { ok: true, segments };
+  }
+  // A made-up recording: quiet, with two short low beeps where he talks and a higher tone, as long as the line, where the
+  // coach talks, so you can hear the lit line keep up with the audio.
+  wav(w, i) {
+    const key = w.workout_id + ":" + i;
+    if (this.wavs.has(key)) return this.wavs.get(key);
+    const seg = w.segments[i], rate = 8000, n = Math.round((seg.duration_ms / 1000) * rate);
+    const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, s) => { for (let j = 0; j < s.length; j++) v.setUint8(o + j, s.charCodeAt(j)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); str(8, "WAVE"); str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, "data"); v.setUint32(40, n * 2, true);
+    const tone = (from, secs, hz, amp) => {
+      const a = Math.max(0, Math.round(from * rate)), b = Math.min(n, Math.round((from + secs) * rate)), fade = rate * 0.015;
+      for (let j = a; j < b; j++) {
+        const env = Math.min(1, (j - a) / fade, (b - j) / fade);
+        const cur = v.getInt16(44 + j * 2, true);
+        v.setInt16(44 + j * 2, Math.max(-32767, Math.min(32767, cur + Math.round(Math.sin((2 * Math.PI * hz * (j - a)) / rate) * amp * env * 32767))), true);
+      }
+    };
+    for (const l of w.lines.filter((x) => x.audio_segment_id === seg.segment_id)) {
+      const at = l.audio_offset_ms / 1000;
+      if (l.side === "you") { tone(at, 0.12, 440, 0.22); tone(at + 0.2, 0.12, 440, 0.22); }
+      else tone(at, Math.min(6, 0.3 * String(l.text || "").split(/\s+/).length), 660, 0.16);
+    }
+    const blob = new Blob([buf], { type: "audio/wav" });
+    this.wavs.set(key, blob);
+    return blob;
+  }
+  // gr_review_notes_force's answers: no notes, already taught from these, capped, failed after three tries, or started.
+  teach(x) {
+    const w = this.find(x.workout_id);
+    if (!w) return this.fail("workout not found");
+    const np = w.notes_pass;
+    if (!this.notesOf(w).length) return { ok: true, state: "no_notes", pass_id: null, capped: null, error: null };
+    if (np.last?.status === "running") return { ok: true, state: "running", pass_id: np.last.pass_id, capped: null, error: null };
+    const key = this.batchKey(w);
+    if (w.passKey === key) return { ok: true, state: "already_done", pass_id: np.last_done?.pass_id ?? null, capped: null, error: null };
+    if (w.demo_teach === "capped") return { ok: true, state: "capped", pass_id: null, capped: "daily", error: null };
+    if (w.demo_teach === "failed") {
+      np.last = { pass_id: ++this.passId, status: "failed", trigger: "teach", at: new Date().toISOString(), error: "the reviewer didn't answer in time" };
+      return { ok: true, state: "failed", pass_id: np.last.pass_id, capped: null, error: np.last.error };
+    }
+    const id = ++this.passId;
+    np.last = { pass_id: id, status: "running", trigger: "teach", at: new Date().toISOString() };
+    // What this pass reads: the notes as they are now. One added or changed while it runs waits for the next.
+    const read = new Date(Math.max(...this.notesOf(w).map((n) => Date.parse(n.updated_at)))).toISOString();
+    setTimeout(() => {
+      // After every note it read, whatever the made-up dates say.
+      const at = new Date(Math.max(Date.now(), Date.parse(read) + 1000)).toISOString();
+      np.last = { pass_id: id, status: "done", trigger: "teach", at };
+      np.last_done = { pass_id: id, at, ...JSON.parse(JSON.stringify(this.raw.teach_result || {})) };
+      np.through = read;
+      w.passKey = key;
+    }, 5000);
+    return { ok: true, state: "started", pass_id: id, capped: null, error: null };
+  }
+}
+
+// ---------------------------------------------------------------- go
+
+(async function boot() {
+  if (DEMO) {
+    try {
+      demo = new DemoServer(await (await fetch("review-demo.json", { cache: "no-store" })).json());
+    } catch {
+      show(h("div", { class: "center" }, h("p", { class: "err" }, "Couldn't load the demo's sample file, review-demo.json.")));
+      return;
+    }
+    const as = params.get("as");
+    if (as === "signedout") return signInScreen();
+    if (as === "guest") return notOwnerScreen();
+    return start();
+  }
+  if (!store.get()) return signInScreen();
+  start();
+})();
+</script>
+</body>
+</html>

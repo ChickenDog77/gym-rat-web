@@ -1,0 +1,234 @@
+{
+  "about": "Made-up workouts for review.html?demo=1. Nothing here is a real workout or a real person; Sam is a placeholder name. Times are seconds from the workout's start. Segments are 2-minute pieces of audio (at_s, dur_s), with a gap between the third and fourth on purpose. A note marked new was written after the last pass, so it waits to be taught.",
+  "link_life_s": 90,
+  "teach_result": {
+    "summary": "Your notes ask for less talk: nothing for side talk or a water break, the set said back and nothing after it, and no closers. Two coaching preferences added and one fix drafted.",
+    "applied": [
+      { "change_id": 9101, "kind": "preference", "status": "applied", "what": "Coaching preference: Say nothing to greetings, side talk or breaks." },
+      { "change_id": 9102, "kind": "preference", "status": "applied", "what": "Coaching preference: After a set, say it back and stop." }
+    ],
+    "drafts": [
+      { "draft_id": 401, "kind": "app_change", "title": "Check the earlier sets at a weight before calling a rep PR" }
+    ],
+    "rejected": 1,
+    "cost_usd": 0.03
+  },
+  "trend": [
+    { "workout_id": 91, "date": "2026-10-12", "words_per_set": 44.5, "sets": 14, "replies": 19 },
+    { "workout_id": 92, "date": "2026-10-14", "words_per_set": 52, "sets": 12, "replies": 17 },
+    { "workout_id": 93, "date": "2026-10-16", "words_per_set": 38.2, "sets": 15, "replies": 18 },
+    { "workout_id": 94, "date": "2026-10-19", "words_per_set": 41, "sets": 13, "replies": 16 },
+    { "workout_id": 95, "date": "2026-10-22", "words_per_set": 33.6, "sets": 16, "replies": 18 },
+    { "workout_id": 105 },
+    { "workout_id": 104 },
+    { "workout_id": 103 },
+    { "workout_id": 102 },
+    { "workout_id": 101 }
+  ],
+  "workouts": [
+    {
+      "workout_id": 101,
+      "date": "2026-11-04",
+      "focus": "Push",
+      "started_at": "2026-11-04T22:30:00Z",
+      "ended_at": "2026-11-04T22:39:10Z",
+      "sets": 7,
+      "counted_by": "review",
+      "cut_off": 2,
+      "cut_off_from": "phone",
+      "expired_link": 1,
+      "segments": [
+        { "at_s": 0, "dur_s": 120 },
+        { "at_s": 120, "dur_s": 120 },
+        { "at_s": 240, "dur_s": 75 },
+        { "at_s": 355, "dur_s": 120 },
+        { "at_s": 475, "dur_s": 65 }
+      ],
+      "notes_pass": {
+        "last": { "pass_id": 650, "status": "done", "trigger": "nightly", "at": "2026-11-05T08:01:00Z" },
+        "last_done": {
+          "pass_id": 650,
+          "at": "2026-11-05T08:01:00Z",
+          "cost_usd": 0.02,
+          "summary": "One note said the coach answered side talk. Talk level moved one step quieter.",
+          "applied": [
+            { "change_id": 9001, "kind": "chatty", "status": "undone", "what": "Talk level: normal to quiet" }
+          ],
+          "drafts": [],
+          "rejected": 0
+        }
+      },
+      "lines": [
+        { "t": 1, "side": "you", "text": "Gym time." },
+        { "t": 3, "side": "coach", "text": "Sam, you showed up again. Pray His will be done today, then go get it.", "tools": ["start_workout"] },
+        { "t": 18, "side": "you", "text": "Bench press, 135 for 10." },
+        { "t": 20, "side": "coach", "text": "Bench press, one thirty-five for ten.", "tools": ["log_set"] },
+        { "t": 96, "side": "you", "text": "Hey, man, how's it going?" },
+        { "t": 98, "side": "coach", "text": "Hey! Good to see you. Keep that energy up, you're doing great today.",
+          "notes": [{ "tag": "silent", "text": "He was talking to someone else. Say nothing.", "new": false }] },
+        { "t": 128, "side": "you", "text": "155 for 8." },
+        { "t": 130, "side": "coach", "text": "Bench press, one fifty-five for eight. Nice and steady. Tell me what you got next and I'll repeat it back.", "tools": ["log_set"],
+          "notes": [
+            { "tag": "too_long", "text": "", "new": true },
+            { "tag": "say_this", "better_line": "Bench press, one fifty-five for eight.", "text": "Just the echo.", "new": true }
+          ] },
+        { "t": 196, "side": "you", "not_clear": true,
+          "notes": [{ "text": "Good: it asked instead of guessing.", "new": false }] },
+        { "t": 198, "side": "coach", "text": "How many reps?" },
+        { "t": 205, "side": "you", "text": "Eight." },
+        { "t": 207, "side": "coach", "text": "Bench press, one fifty-five for eight.", "tools": ["edit_set"] },
+        { "t": 262, "side": "you", "text": "Incline dumbbell press, 50s for 12." },
+        { "t": 264, "side": "coach", "text": "Incline dumbbell press, fifty each for twelve.", "tools": ["log_set"] },
+        { "t": 300, "side": "you", "text": "Add a note for incline: second notch on the bench." },
+        { "t": 302, "side": "coach", "text": "Saved.", "tools": ["set_exercise_note"] },
+        { "t": 330, "side": "you", "text": "Water break." },
+        { "t": 332, "side": "coach", "text": "Take your time. Staying hydrated is key for performance.",
+          "notes": [{ "tag": "silent", "text": "No need to answer this.", "new": true }] },
+        { "t": 362, "side": "you", "text": "50 for 10." },
+        { "t": 364, "side": "coach", "text": "Incline dumbbell press, fifty each for ten. That's a rep PR at fifty!", "tools": ["log_set"],
+          "notes": [{ "tag": "wrong", "text": "Not a PR. Twelve at fifty was two sets ago.", "new": true }] },
+        { "t": 400, "side": "you", "text": "Start a plank." },
+        { "t": 401, "side": "coach", "text": "Plank. Ten seconds.", "tools": ["start_timed_hold"] },
+        { "t": 473, "side": "you", "text": "Done." },
+        { "t": 474, "side": "coach", "text": "Plank, sixty-two seconds.", "tools": ["log_set"] },
+        { "t": 500, "side": "you", "text": "Cable fly, 30 for 15." },
+        { "t": 502, "side": "coach", "text": "Cable fly, thirty for fifteen. Got it. Last one today. Let me think about how to finish strong. Great work, see you next time!", "tools": ["log_set"],
+          "notes": [{ "tag": "too_long", "text": "No closers, and no \"let me think\".", "new": true }] },
+        { "t": 528, "side": "you", "text": "End workout." },
+        { "t": 530, "side": "coach", "text": "Workout closed. Seven sets, 6,420 pounds.", "tools": ["end_workout"] },
+        { "t": 548, "side": "you", "text": "Thanks, man." }
+      ]
+    },
+    {
+      "workout_id": 102,
+      "date": "2026-11-02",
+      "focus": "Pull",
+      "started_at": "2026-11-02T23:00:00Z",
+      "ended_at": "2026-11-02T23:07:00Z",
+      "sets": 5,
+      "counted_by": "page",
+      "audio_deleted": true,
+      "segments": [],
+      "notes_pass": {},
+      "lines": [
+        { "t": 2, "side": "you", "text": "Let's go." },
+        { "t": 4, "side": "coach", "text": "Let's go, Sam! Jesus loves you, so go lift like it.", "tools": ["start_workout"] },
+        { "t": 30, "side": "you", "text": "Lat pulldown, 120 for 12." },
+        { "t": 32, "side": "coach", "text": "Got it. Lat pulldown, one twenty for twelve. Great start! Keep your chest up and pull with your elbows. Next set, try one thirty.", "tools": ["log_set"] },
+        { "t": 120, "side": "you", "text": "130 for 10." },
+        { "t": 122, "side": "coach", "text": "Got it, one thirty for ten. That's solid work. Rest about ninety seconds and then go again.", "tools": ["log_set"] },
+        { "t": 200, "side": "you", "not_clear": true },
+        { "t": 203, "side": "coach", "text": "Sorry, I didn't catch that. Tell me what you got and I'll repeat it back." },
+        { "t": 210, "side": "you", "text": "130 for 9." },
+        { "t": 212, "side": "coach", "text": "Got it. One thirty for nine. Nice grind on that last rep.", "tools": ["log_set"] },
+        { "t": 300, "side": "you", "text": "Seated row, 140 for 12." },
+        { "t": 302, "side": "coach", "text": "Got it. Seated row, one forty for twelve. Squeeze at the back of every rep.", "tools": ["log_set"] },
+        { "t": 410, "side": "you", "text": "That's it for today." },
+        { "t": 412, "side": "coach", "text": "Workout closed. Great session! See you next time.", "tools": ["end_workout"] }
+      ]
+    },
+    {
+      "workout_id": 103,
+      "date": "2026-10-30",
+      "focus": "Legs",
+      "started_at": "2026-10-30T22:15:00Z",
+      "ended_at": "2026-10-30T22:23:20Z",
+      "sets": 6,
+      "counted_by": "review",
+      "cut_off": 0,
+      "cut_off_from": "review",
+      "segments": [],
+      "demo_teach": "capped",
+      "notes_pass": {
+        "last": { "pass_id": 600, "status": "failed", "trigger": "nightly", "at": "2026-10-31T08:02:00Z", "error": "the reviewer didn't answer in time" }
+      },
+      "lines": [
+        { "t": 3, "side": "coach", "text": "Sam, iron sharpens iron. Choose Him today, then go to work.", "tools": ["start_workout"] },
+        { "t": 40, "side": "you", "text": "Squat, 185 for 8." },
+        { "t": 42, "side": "coach", "text": "Squat, one eighty-five for eight.", "tools": ["log_set"] },
+        { "t": 150, "side": "you", "text": "225 for 5.",
+          "notes": [{ "tag": "say_this", "better_line": "Squat, two twenty-five for five.", "text": "It said nothing after this set.", "new": true }] },
+        { "t": 260, "side": "you", "text": "225 for 5 again." },
+        { "t": 262, "side": "coach", "text": "Squat, two fifteen for five.", "tools": ["log_set"],
+          "notes": [{ "tag": "wrong", "text": "It said 215. I said 225.", "new": true }] },
+        { "t": 380, "side": "you", "text": "Leg press, 360 for 12." },
+        { "t": 382, "side": "coach", "text": "Leg press, three sixty for twelve.", "tools": ["log_set"] },
+        { "t": 480, "side": "you", "text": "Done for today." },
+        { "t": 482, "side": "coach", "text": "Workout closed. Six sets.", "tools": ["end_workout"] }
+      ]
+    },
+    {
+      "workout_id": 104,
+      "date": "2026-10-28",
+      "focus": "Upper body",
+      "started_at": "2026-10-28T21:40:00Z",
+      "ended_at": "2026-10-28T21:43:30Z",
+      "sets": 4,
+      "counted_by": "review",
+      "cut_off": 1,
+      "cut_off_from": "phone",
+      "segments": [
+        { "at_s": 0, "dur_s": 120 },
+        { "at_s": 120, "dur_s": 90 }
+      ],
+      "taught": true,
+      "notes_pass": {
+        "last": { "pass_id": 550, "status": "done", "trigger": "nightly", "at": "2026-10-29T08:01:00Z" },
+        "last_done": {
+          "pass_id": 550,
+          "at": "2026-10-29T08:01:00Z",
+          "cost_usd": 0.02,
+          "summary": "Form answers should be one sentence, and rows means the seated cable row. One preference drafted as a rule for everyone.",
+          "applied": [
+            { "change_id": 8801, "kind": "nickname", "status": "applied", "what": "\"rows\" means Seated cable row" },
+            { "change_id": 8802, "kind": "preference", "status": "applied", "what": "Coaching preference: Answer a form question in one sentence." }
+          ],
+          "drafts": [
+            { "draft_id": 390, "kind": "rule_for_everyone", "title": "Answer a form question in one sentence" }
+          ],
+          "rejected": 0
+        }
+      },
+      "lines": [
+        { "t": 2, "side": "you", "text": "Gym time." },
+        { "t": 4, "side": "coach", "text": "Big day, Sam. Thy will be done, and let's crush this one.", "tools": ["start_workout"] },
+        { "t": 35, "side": "you", "text": "Rows, 120 for 12.",
+          "notes": [{ "text": "It knew rows meant the seated cable row. Keep that.", "new": false }] },
+        { "t": 37, "side": "coach", "text": "Seated cable row, one twenty for twelve.", "tools": ["log_set"] },
+        { "t": 95, "side": "you", "text": "How far should I lean back on these?" },
+        { "t": 97, "side": "coach", "text": "Stay tall. Lean back just a little at the end, then let the weight pull your arms forward without rounding your back. Keep the movement slow.",
+          "notes": [{ "tag": "too_long", "text": "One sentence is plenty for form.", "new": false }] },
+        { "t": 150, "side": "you", "text": "130 for 10." },
+        { "t": 152, "side": "coach", "text": "Seated cable row, one thirty for ten.", "tools": ["log_set"] },
+        { "t": 185, "side": "you", "text": "Overhead press, 95 for 8." },
+        { "t": 187, "side": "coach", "text": "Overhead press, ninety-five for eight.", "tools": ["log_set"] },
+        { "t": 200, "side": "you", "text": "Close it out." },
+        { "t": 202, "side": "coach", "text": "Workout closed. Four sets.", "tools": ["end_workout"] }
+      ]
+    },
+    {
+      "workout_id": 105,
+      "date": "2026-10-26",
+      "focus": "Arms",
+      "started_at": "2026-10-26T22:05:00Z",
+      "ended_at": "2026-10-26T22:10:10Z",
+      "sets": 4,
+      "counted_by": "page",
+      "segments": [],
+      "demo_teach": "failed",
+      "notes_pass": {},
+      "lines": [
+        { "t": 3, "side": "coach", "text": "Proud of you, Sam. Be strong and courageous, because God is with you.", "tools": ["start_workout"] },
+        { "t": 30, "side": "you", "text": "Curls, 30 for 12." },
+        { "t": 32, "side": "coach", "text": "Cable curl, thirty for twelve.", "tools": ["log_set"] },
+        { "t": 90, "side": "you", "text": "Nice shirt." },
+        { "t": 92, "side": "coach", "text": "Thanks! Let's keep the focus on your curls.",
+          "notes": [{ "tag": "silent", "text": "", "new": true }] },
+        { "t": 150, "side": "you", "text": "Triceps pushdown, 50 for 15." },
+        { "t": 152, "side": "coach", "text": "Triceps pushdown, fifty for fifteen.", "tools": ["log_set"] },
+        { "t": 300, "side": "you", "text": "End it." },
+        { "t": 302, "side": "coach", "text": "Workout closed.", "tools": ["end_workout"] }
+      ]
+    }
+  ]
+}
