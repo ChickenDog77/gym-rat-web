@@ -6,6 +6,19 @@
 <title>Gym Rat</title>
 <meta name="description" content="Look back at your Gym Rat workouts, PRs, and progress.">
 <meta name="robots" content="noindex">
+<!-- The card a shared link shows in a text (iMessage, WhatsApp, Slack). The site is plain files, so every page has the same one. -->
+<meta property="og:site_name" content="Gym Rat">
+<meta property="og:title" content="Gym Rat">
+<meta property="og:description" content="A voice coach in your ear. Log every set by voice and lift with your friends.">
+<meta property="og:image" content="https://gymrat.bensealey.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Gym Rat: a voice coach in your ear.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gymrat.bensealey.com/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
 <style>
   :root {
     --bg: #0b0b0c; --card: #161618; --card2: #1d1d20; --line: #2a2a2e;
@@ -173,7 +186,7 @@ function render(d) {
     <h2>PRs</h2>
     <div class="card">${prs.length ? prs.slice(0, 25).map((p) => `
       <div class="pr"><div><strong>${esc(p.exercise)}</strong> <span class="muted">· ${day(p.date)}</span></div>
-      <div>${lb(p.weight)} × ${p.reps} <span class="muted">(was ${lb(p.previous_best)})</span></div></div>`).join("")
+      <div>${lb(p.weight)} × ${p.reps} <span class="muted">(was ${p.kind && p.kind !== "weight" ? `${lb(p.weight)} × ${p.previous_best_reps}` : lb(p.previous_best)})</span></div></div>`).join("")
       : `<p class="muted">No PRs yet. They show up here the day you hit them.</p>`}</div>
 
     <h2>Workouts</h2>
@@ -233,15 +246,16 @@ function render(d) {
 const prLine = (p) => p.kind === "weight" ? `${esc(p.exercise)}: ${lb(p.weight)} lb, heaviest ever (was ${lb(p.previous_best)})`
   : p.kind === "reps" ? `${esc(p.exercise)}: ${p.reps} reps at ${lb(p.weight)}, most ever at that weight (was ${p.previous_best_reps})`
   : p.kind === "hold" ? `${esc(p.exercise)}: ${p.seconds} seconds, longest hold (was ${p.previous_best_seconds})`
-  : `${esc(p.exercise)}: ${num(p.total)} lb moved, most in one workout (was ${num(p.previous_best_total)})`;
+  : `${esc(p.exercise)}: ${p.reps} reps at ${lb(p.weight)}`;
 async function loadShared(key) {
   const out = await call({ action: "web_workout", key });
   if (!out.ok) { app.innerHTML = `<div class="center"><div class="brand">${LOGO}<span>Gym Rat</span></div><p class="muted">This workout link isn't valid anymore.</p></div>`; return; }
   const w = out.workout;
+  document.title = `${w.name}'s workout · Gym Rat`;
   app.innerHTML = `
     <header><div class="brand">${LOGO}<span>Gym Rat</span></div></header>
     <h1 style="font-size:28px;margin:0 0 4px">${esc(w.name)}'s workout</h1>
-    <p class="muted" style="margin:0 0 18px">${esc(w.focus || "Workout")} · ${day(w.date)}${w.place ? " · " + esc(w.place) : ""}</p>
+    <p class="muted" style="margin:0 0 18px">${esc(w.focus || "Workout")} · ${day(w.date)}${w.minutes ? ` · ${num(w.minutes)} min` : ""}${w.place ? " · " + esc(w.place) : ""}</p>
     <div class="grid">
       <div class="stat"><div class="v">${num(w.pounds)}</div><div class="k">Pounds moved</div></div>
       <div class="stat"><div class="v">${(w.exercises || []).length}</div><div class="k">Exercises</div></div>
@@ -253,11 +267,14 @@ async function loadShared(key) {
       <div class="ex" style="margin:0 0 14px"><div class="name">${esc(e.exercise)}</div>
         <div class="chips">${(e.sets || []).map((x) => `<span class="chip ${x.warmup ? "warm" : x.drop ? "drop" : ""}">${x.warmup ? "W " : x.drop ? "D " : ""}${lb(x.w)}×${x.r}</span>`).join("")}</div>
       </div>`).join("")}</div>
-    <p class="muted" style="font-size:13px;margin-top:24px">Logged by voice with Gym Rat, a coach in your ear.</p>`;
+    <p class="muted" style="font-size:13px;margin-top:24px">Logged by voice with Gym Rat, a coach in your ear.</p>
+    <div class="card" style="margin-top:12px;text-align:center"><strong>Want in?</strong> Ask ${esc(w.invite_from || "Ben")} for an invite.</div>`;
 }
 
 const params = new URLSearchParams(location.search);
-if (params.has("w")) {
+if (params.has("i")) {
+  location.replace("join.html" + location.search);
+} else if (params.has("w")) {
   loadShared(params.get("w"));
 } else if (params.has("demo")) {
   // Local preview only: ?demo loads sample.json next to this page.

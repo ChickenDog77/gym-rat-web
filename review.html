@@ -521,8 +521,25 @@ function noAudioView(audio) {
 const allNotes = () => S.lines.flatMap((l) => l.notes || []);
 const tagCount = (t) => allNotes().filter((n) => n.tag === t).length;
 
+// The scorecard that goes out with each workout's yes-or-no message, as tiles. Nothing for a workout with no sets.
+function scorecardTiles(card) {
+  if (!card || typeof card !== "object" || !(Number(card.sets) > 0)) return [];
+  const secs = (ms) => (Math.round(Number(ms) / 100) / 10).toFixed(1) + " s";
+  const wait = (w, k, what) => Number(w?.n) > 0
+    ? [{ v: secs(w.typical), k, title: `${what}: the typical wait. The slowest tenth took ${secs(w.worst_tenth)} or more. Counted over ${w.n}.` }] : [];
+  return [
+    { v: String(Number(card.cut) || 0), k: "Replies cut", title: "Replies the coach started and didn't finish" },
+    { v: String(Number(card.asked_less) || 0), k: "Asked for less talk", title: "Times you told it to stop or talk less" },
+    { v: String(Number(card.are_you_there) || 0), k: "“Are you there?”", title: "Times you had to ask whether it was listening" },
+    ...wait(card.set_wait_ms, "Sets answered in", "From the end of your words to the set's line"),
+    ...wait(card.other_wait_ms, "Other replies in", "From the end of your words to the reply"),
+    { v: String(Number(card.voice_fixes) || 0), k: "Sets fixed by voice", title: "Sets you had to correct out loud" },
+  ];
+}
+
 function renderMetrics() {
   const m = S.data.metrics || {};
+  const score = scorecardTiles(S.data.scorecard);
   const tile = (v, k, title) => h("div", { class: "stat", title }, h("div", { class: "v" }, v), h("div", { class: "k" }, k));
   const cut = m.cut_off == null ? "–" : num1(m.cut_off);
   const from = m.counted_by === "review" ? "Counted by the coach's self-review." : "Counted from the lines; this one has no self-review numbers.";
@@ -535,7 +552,10 @@ function renderMetrics() {
       tile(num1(m.got_it), "“Got it”", "Coach lines with “got it” in them"),
       tile(String(tagCount("silent")), "Should've been silent", "Lines you tagged"),
       tile(cut, "Times you cut it off")),
-    h("p", { class: "muted small", style: "margin:8px 2px 0" }, from + cutFrom));
+    h("p", { class: "muted small", style: "margin:8px 2px 0" }, from + cutFrom),
+    score.length ? h("h2", { class: "small", style: "margin:16px 2px 8px" }, "Scorecard") : null,
+    score.length ? h("div", { class: "grid" }, score.map((t) => tile(t.v, t.k, t.title))) : null,
+    score.length ? h("p", { class: "muted small", style: "margin:8px 2px 0" }, "The same numbers Jarvis sends with this workout's yes-or-no message.") : null);
 }
 
 function renderTrend() {
@@ -1321,6 +1341,12 @@ class DemoServer {
   }
   notesOf(w) { return w.lines.flatMap((l) => l.notes); }
   batchKey(w) { return this.notesOf(w).map((n) => n.note_id + ":" + n.updated_at).sort().join(","); }
+  scorecard(w) {
+    const m = this.metrics(w);
+    if (!m.sets) return null;
+    return { sets: m.sets, coach_words: m.words, words_per_set: m.words_per_set, cut: w.cut_off ?? 0, asked_less: 1, are_you_there: 0, voice_fixes: 1,
+             set_wait_ms: { n: m.sets, typical: 640, worst_tenth: 980 }, other_wait_ms: { n: 6, typical: 1420, worst_tenth: 2300 } };
+  }
   metrics(w) {
     const said = w.lines.filter((l) => l.side === "coach" && typeof l.text === "string");
     const words = said.reduce((n, l) => n + l.text.trim().split(/\s+/).filter(Boolean).length, 0);
@@ -1372,7 +1398,7 @@ class DemoServer {
           ok: true,
           review: { workout: { workout_id: w.workout_id, date: w.date, focus: w.focus, started_at: w.started_at, ended_at: w.ended_at },
                     lines: w.lines, audio: { segments: w.segments.map(({ segment_id, seq, started_at, duration_ms, path }) => ({ segment_id, seq, started_at, duration_ms, path })), deleted: !!w.audio_deleted } },
-          metrics: this.metrics(w), trend: this.trend(), notes_pass: this.passState(w, true),
+          metrics: this.metrics(w), trend: this.trend(), notes_pass: this.passState(w, true), scorecard: this.scorecard(w),
         });
       }
       case "turn_note": return copy(this.turnNote(x));
